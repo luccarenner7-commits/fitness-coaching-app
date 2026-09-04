@@ -1,0 +1,107 @@
+@import 'tailwindcss';
+
+/*
+  Design system — dark, modern health/fitness app.
+  Deep navy/black ground, purple accent, quiet cards, generous spacing.
+  Dark is the only theme in V1 (see DEVIATIONS.md for a light theme later).
+*/
+@theme {
+  --color-bg: #090c16;
+  --color-bg-elevated: #0f1424;
+  --color-surface: #141a2e;
+  --color-surface-raised: #1b2338;
+  --color-border: #262f47;
+  --color-border-soft: #1e2740;
+
+  --color-fg: #f1f3f9;
+  --color-fg-muted: #9aa4bf;
+  --color-fg-subtle: #69728e;
+
+  --color-accent: #7c5cff;
+  --color-accent-strong: #6a45ff;
+  --color-accent-soft: #a78dff;
+  --color-on-accent: #ffffff;
+
+  --color-success: #3fd6a0;
+  --color-warning: #f5b14c;
+  --color-danger: #f0616d;
+
+  --radius-card: 1.25rem;
+  --radius-control: 0.875rem;
+
+  --font-sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto,
+    'Helvetica Neue', Arial, sans-serif;
+
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    margin: 0;
+    min-height: 100dvh;
+    background-color: var(--color-bg);
+    color: var(--color-fg);
+    font-family: var(--font-sans);
+    font-feature-settings: 'cv11', 'ss01';
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    overscroll-behavior-y: none;
+  }
+
+  /* keep focus rings for keyboard users, drop them for pointer taps */
+  :focus-visible {
+    outline: 2px solid var(--color-accent-soft);
+    outline-offset: 2px;
+    border-radius: 0.5rem;
+  }
+
+  button {
+    font: inherit;
+    color: inherit;
+  }
+
+  ::selection {
+    background: color-mix(in oklab, var(--color-accent) 40%, transparent);
+  }
+}
+
+@layer utilities {
+  .safe-top {
+    padding-top: env(safe-area-inset-top);
+  }
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .pb-nav {
+    padding-bottom: calc(4.75rem + env(safe-area-inset-bottom));
+  }
+
+  /* subtle entrance for page content */
+  .animate-rise {
+    animation: rise 0.32s var(--ease-out-soft) both;
+  }
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .animate-rise {
+      animation: none;
+    }
+  }
+}
