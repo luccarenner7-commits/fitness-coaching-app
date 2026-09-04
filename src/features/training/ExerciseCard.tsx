@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { ChevronDown, Info } from 'lucide-react';
 import type { Exercise, SessionLog } from '@/domain/types';
 import { cn } from '@/lib/cn';
-import { loggedSetCount, sessionHasLog } from '@/lib/trainingLog';
+import { sessionHasLog } from '@/lib/trainingLog';
 import { SetLogger } from './SetLogger';
 import { ExerciseHistoryChart } from './ExerciseHistoryChart';
 
@@ -12,8 +12,11 @@ interface Props {
   workoutId: string;
   workoutName: string;
   sessionCount: number;
+  /** Which "Einheit" is the current training day for this whole workout — fixed, not user-switchable. */
+  currentSessionIndex: number;
   readOnly: boolean;
   onSessionLogChange: (exerciseId: string, sessionIndex: number, log: SessionLog) => void;
+  onSetConfirmed: (restSeconds: number) => void;
   defaultOpen?: boolean;
 }
 
@@ -29,19 +32,16 @@ export function ExerciseCard({
   workoutId,
   workoutName,
   sessionCount,
+  currentSessionIndex,
   readOnly,
   onSessionLogChange,
+  onSetConfirmed,
   defaultOpen = false,
 }: Props) {
   const [open, setOpen] = useState(defaultOpen);
   const hasLogging = sessionCount > 0;
-  // default to the first session that has no logged sets yet
-  const [activeSession, setActiveSession] = useState(() => {
-    const idx = exercise.sessionLogs.findIndex((l) => !sessionHasLog(l));
-    return idx >= 0 ? idx : 0;
-  });
-
   const totalLogged = exercise.sessionLogs.filter(sessionHasLog).length;
+  const currentSessionLog = exercise.sessionLogs[currentSessionIndex];
 
   const spec = [
     exercise.sets && `${exercise.sets} Sätze`,
@@ -95,6 +95,14 @@ export function ExerciseCard({
             )}
             <dt className="text-fg-subtle">Vorgabe</dt>
             <dd className="font-medium text-fg">{spec || '—'}</dd>
+            {hasLogging && sessionCount > 1 && (
+              <>
+                <dt className="text-fg-subtle">Einheit</dt>
+                <dd className="font-medium text-fg">
+                  {currentSessionIndex + 1} von {sessionCount}
+                </dd>
+              </>
+            )}
           </dl>
 
           {exercise.cue && (
@@ -105,42 +113,19 @@ export function ExerciseCard({
           )}
 
           {hasLogging ? (
-            <>
-              {sessionCount > 1 && (
-                <div className="mb-3 flex gap-1.5">
-                  {Array.from({ length: sessionCount }, (_, i) => i).map((i) => (
-                    <button
-                      key={i}
-                      type="button"
-                      onClick={() => setActiveSession(i)}
-                      className={cn(
-                        'flex-1 rounded-control py-1.5 text-xs font-medium transition-colors',
-                        i === activeSession
-                          ? 'bg-accent text-on-accent'
-                          : 'bg-bg-elevated text-fg-muted hover:text-fg',
-                        loggedSetCount(exercise.sessionLogs[i]) > 0 && i !== activeSession && 'text-success',
-                      )}
-                    >
-                      Einheit {i + 1}
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              <SetLogger
-                key={activeSession}
-                weekId={weekId}
-                workoutId={workoutId}
-                workoutName={workoutName}
-                exerciseId={exercise.id}
-                exerciseName={exercise.name}
-                sessionIndex={activeSession}
-                sessionLog={exercise.sessionLogs[activeSession]}
-                defaultSetCount={parseLeadingInt(exercise.sets)}
-                readOnly={readOnly}
-                onChange={(log) => onSessionLogChange(exercise.id, activeSession, log)}
-              />
-            </>
+            <SetLogger
+              weekId={weekId}
+              workoutId={workoutId}
+              workoutName={workoutName}
+              exerciseId={exercise.id}
+              exerciseName={exercise.name}
+              sessionIndex={currentSessionIndex}
+              sessionLog={currentSessionLog}
+              defaultSetCount={parseLeadingInt(exercise.sets)}
+              readOnly={readOnly}
+              onChange={(log) => onSessionLogChange(exercise.id, currentSessionIndex, log)}
+              onSetConfirmed={onSetConfirmed}
+            />
           ) : (
             <p className="text-xs text-fg-subtle">
               Für diesen Plan sieht das Sheet keine Eintragsfelder vor – nur ansehen.

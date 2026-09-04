@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import type { SessionLog } from '@/domain/types';
@@ -9,11 +9,13 @@ import { ErrorBlock, LoadingBlock } from '@/components/ui/StatusViews';
 import { SectionLabel } from '@/components/ui/Card';
 import { ExerciseCard } from '@/features/training/ExerciseCard';
 import { WorkoutRowLink } from '@/features/training/WorkoutRowLink';
+import { RestTimerBar, type ActiveRest } from '@/features/training/RestTimerBar';
 import { formatWeekRange } from '@/lib/week';
 
 export function WorkoutPage() {
   const repo = useRepository();
   const { weekId = '', workoutId } = useParams();
+  const [rest, setRest] = useState<ActiveRest>();
 
   const weeks = useAsync(() => repo.getWeeks(), []);
   const plan = useAsync(() => repo.getTrainingPlan(weekId), [weekId]);
@@ -32,6 +34,22 @@ export function WorkoutPage() {
     }));
   }, [workout]);
 
+  /**
+   * "Einheit" = one real-world training day. There is deliberately no way to
+   * switch it manually — it's the first session that isn't fully logged yet
+   * across every exercise in the workout, i.e. today's visit. If a client
+   * skips an exercise entirely for a visit, that session stays "current"
+   * until it's touched (see DEVIATIONS.md).
+   */
+  const currentSessionIndex = useMemo(() => {
+    if (!workout || workout.sessionCount === 0) return 0;
+    const exercises = workout.rows.filter((r) => r.kind === 'exercise').map((r) => r.exercise);
+    for (let i = 0; i < workout.sessionCount; i++) {
+      if (!exercises.every((ex) => sessionHasLog(ex.sessionLogs[i]))) return i;
+    }
+    return workout.sessionCount - 1;
+  }, [workout]);
+
   function handleSessionLogChange(exerciseId: string, sessionIndex: number, log: SessionLog) {
     plan.setData((prev) => {
       if (!prev) return prev;
@@ -41,6 +59,10 @@ export function WorkoutPage() {
       if (row && row.kind === 'exercise') row.exercise.sessionLogs[sessionIndex] = log;
       return next;
     });
+  }
+
+  function handleSetConfirmed(exerciseName: string, restSeconds: number) {
+    setRest({ exerciseName, durationSeconds: restSeconds, endsAt: Date.now() + restSeconds * 1000 });
   }
 
   const loading = weeks.loading || plan.loading;
@@ -121,8 +143,10 @@ export function WorkoutPage() {
                   workoutId={workout.id}
                   workoutName={workout.name}
                   sessionCount={workout.sessionCount}
+                  currentSessionIndex={currentSessionIndex}
                   readOnly={readOnly}
                   onSessionLogChange={handleSessionLogChange}
+                  onSetConfirmed={(seconds) => handleSetConfirmed(row.exercise.name, seconds)}
                 />
               ),
             )}
@@ -138,6 +162,8 @@ export function WorkoutPage() {
       {!loading && !plan.error && plan.data && weeks.data && workoutId && !workout && (
         <ErrorBlock error={new Error('Dieses Training gibt es nicht.')} />
       )}
+
+      {rest && <RestTimerBar rest={rest} onDismiss={() => setRest(undefined)} />}
     </>
   );
 }

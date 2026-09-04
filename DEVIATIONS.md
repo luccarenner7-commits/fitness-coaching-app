@@ -29,6 +29,22 @@ Stand: 2026-09-04
       Rückwärtskompatibilität: Historie matcht Übungen über den Namen
       (Workout+Übung-Text), nicht über eine ID — benennt der Coach eine Übung
       um, reißt ihre Historie ab.
+- [x] **Satz bestätigen statt Auto-Save, Pausentimer.** Geändert am 04.09. nach
+      Feedback: jeder Satz wird jetzt erst über einen expliziten
+      Bestätigen-Button gespeichert (grüner Haken), kein stilles Auto-Save mehr
+      beim Verlassen des Feldes. Bestätigen startet einen Pausentimer, dessen
+      Dauer **pro Übung** über Presets (30s–3min) einstellbar ist — rein
+      client-seitig in `localStorage` gemerkt, nicht im Sheet (ist eine
+      Trainingsausführungs-Präferenz, keine Coaching-Daten). Der Timer läuft in
+      einer fixierten Leiste über der Navigation weiter, auch wenn die
+      Übungs-Karte zwischendurch eingeklappt wird.
+- [x] **Keine Einheit-Auswahl mehr.** Eine „Einheit" ist ein realer
+      Trainingstag; die App wählt automatisch die erste Einheit, in der noch
+      nicht **jede** Übung des Workouts mindestens einen Satz hat, statt einer
+      manuellen Umschaltmöglichkeit. Bekannte Einschränkung: Wird eine Übung in
+      einer Einheit komplett übersprungen, bleibt diese Einheit als „aktuell"
+      stehen, bis sie doch noch angefasst wird — kein manuelles
+      „Einheit abschließen" in V1.
 - [ ] **"Belastungssteuerung"-Block** (`Schmerzen während Training 0–10`,
       `Intensität Training 1–10` pro Einheit) ist in der aktuellen Vorlage
       vorhanden, aber in Michaels realen Tabs nicht immer. → V1 liest ihn, wenn
