@@ -25,7 +25,7 @@ Kundenbetreuung/                                  (1n-P5_GFojE4Ul-ZCDnEIXmz-rjGD
 │        "Checkliste <Name>")
 ├── APP-TEST Testkunde (nicht loeschen)/          (1Mhm15ZdoFGNdEhI7l_V5RPA4BTW-h0F0)  <-- NEU, für die App
 │   └── Woche 1 (31.08.-06.09.26)/                (1Wp7G5rBvV7to26z4sc3FEi6tniHAY06f)
-│       ├── Trainingsplan    (Sheet)  1WFTSFeqxm-gjLACvJuxdjvi3_QuzVDXKpF51SsQDdlM   (Kopie von Michael Woche 12)
+│       ├── Trainingsplan    (Sheet)  15OiUWcx2sG-tvscydxw2xtI-ENaAd4DQ6nvtl60uhw0   (Kopie von Michael Woche 12; 1. Kopie war korrupt und wurde ersetzt)
 │       ├── Schmerztagebuch  (Sheet)  1hPUg_xWmlHC_DfCLqRyGCZPIv3x2eZsecKA6CdOOrJU   (Kopie der Vorlage)
 │       └── Checkliste       (Doc)    1LrMrjCqWjSE_2-SPY1dF1BHXLUqzfc1rfn8BA9m1YLY   (Kopie der Vorlage)
 ```

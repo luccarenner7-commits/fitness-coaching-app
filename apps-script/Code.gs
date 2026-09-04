@@ -158,23 +158,51 @@ function getWeeks_() {
 
 // ─── training plan ───────────────────────────────────────────────────────────
 
+// Training plans never get anywhere near this big; the cap protects against a
+// pathologically large used-range on a copied sheet (which can hang openById-side
+// reads long enough to kill the request).
+var MAX_ROWS = 300;
+var MAX_COLS = 16;
+
+/** Bounded read — never pull the whole (possibly huge) used range. */
+function readGrid_(sheet, maxRows, maxCols) {
+  var lastRow = sheet.getLastRow();
+  var lastCol = sheet.getLastColumn();
+  if (lastRow < 1 || lastCol < 1) return [];
+  var rows = Math.min(lastRow, maxRows || MAX_ROWS);
+  var cols = Math.min(lastCol, maxCols || MAX_COLS);
+  return sheet.getRange(1, 1, rows, cols).getValues();
+}
+
 function getTrainingPlan_(weekId) {
   if (!weekId) throw new Error('weekId fehlt');
   var ssFile = fileInWeek_(weekId, CONFIG.fileNames.trainingPlan);
   var ss = SpreadsheetApp.openById(ssFile.getId());
-  var workouts = ss.getSheets().map(parseWorkoutSheet_).filter(function (w) {
-    return w.rows.length > 0;
+  var workouts = [];
+  ss.getSheets().forEach(function (sheet) {
+    try {
+      var w = parseWorkoutSheet_(sheet);
+      if (w.rows.length > 0) workouts.push(w);
+    } catch (err) {
+      // one broken tab must not kill the whole plan
+    }
   });
   return { weekId: weekId, workouts: workouts };
 }
 
 function norm_(v) {
-  return String(v == null ? '' : v).trim();
+  if (v == null) return '';
+  // Google Sheets happily turns a rep range like "6-10" into a date value.
+  // Reverse it back to "day-month" (which is what the coach originally typed).
+  if (Object.prototype.toString.call(v) === '[object Date]' && !isNaN(v.getTime())) {
+    return v.getDate() + '-' + (v.getMonth() + 1);
+  }
+  return String(v).trim();
 }
 
 /** Parse one tab into a Workout. Tolerant of the coach's varying layouts. */
 function parseWorkoutSheet_(sheet) {
-  var values = sheet.getDataRange().getValues();
+  var values = readGrid_(sheet, MAX_ROWS, MAX_COLS);
   var headerRow = -1;
   var col = { name: -1, sets: -1, reps: -1, startWeight: -1, einheiten: [] };
 
@@ -203,6 +231,7 @@ function parseWorkoutSheet_(sheet) {
   var titleCell = norm_(values[0] && values[0][col.name]) || norm_(values[0] && values[0][0]);
   var sessionCount = col.einheiten.length;
   var rows = [];
+  var exCount = 0;
   var lastExerciseIdx = -2;
 
   for (var rr = headerRow + 1; rr < values.length; rr++) {
@@ -216,11 +245,12 @@ function parseWorkoutSheet_(sheet) {
 
     if (!restEmpty) {
       // exercise row (sheet row number is rr + 1)
+      exCount += 1;
       var ex = {
         kind: 'exercise',
         exercise: {
           id: String(rr + 1),
-          position: rows.filter(function (x) { return x.kind === 'exercise'; }).length + 1,
+          position: exCount,
           name: name,
           sets: sets || null,
           reps: reps || null,
@@ -262,14 +292,14 @@ function saveExerciseResult_(p) {
   })[0];
   if (!sheet) throw new Error('Trainingsvariante nicht gefunden');
 
-  var parsed = parseWorkoutSheet_(sheet);
-  var values = sheet.getDataRange().getValues();
-  var headerRow = -1, setsCol = -1;
+  var values = readGrid_(sheet, MAX_ROWS, MAX_COLS);
+  var headerRow = -1;
   for (var r = 0; r < values.length && headerRow < 0; r++) {
     for (var c = 0; c < values[r].length; c++) {
-      if (norm_(values[r][c]).toLowerCase() === 'sätze') { headerRow = r; setsCol = c; break; }
+      if (norm_(values[r][c]).toLowerCase() === 'sätze') { headerRow = r; break; }
     }
   }
+  if (headerRow < 0) throw new Error('Kopfzeile im Sheet nicht gefunden');
   var einheiten = [];
   for (var i = 0; i < values[headerRow].length; i++) {
     if (/^einheit\s*\d+/i.test(norm_(values[headerRow][i]))) einheiten.push(i);
@@ -285,7 +315,7 @@ function saveExerciseResult_(p) {
 // ─── pain diary ──────────────────────────────────────────────────────────────
 
 function locatePainDiary_(sheet) {
-  var values = sheet.getDataRange().getValues();
+  var values = readGrid_(sheet, 80, 12);
   var firstDayRow = -1, valueCol = -1;
   for (var r = 0; r < values.length && firstDayRow < 0; r++) {
     for (var c = 0; c < values[r].length; c++) {
@@ -388,12 +418,14 @@ function getTodos_(weekId) {
     if (!text) continue;
     var low = text.toLowerCase();
 
-    if (/^notizen/i.test(low)) { inNotes = true; continue; }
-    if (inNotes) { notesParts.push(text); continue; }
-    if (/aufgaben/i.test(low) && low.indexOf(':') >= 0) { heading = text; continue; }
+    // boilerplate that is never a task or a note
     if (/leopirzercoaching/i.test(low)) continue;
     if (/^checkliste/i.test(low)) continue;
     if (/woche\s*:/i.test(low) || /name\s*:/i.test(low)) continue;
+
+    if (/^notizen/i.test(low)) { inNotes = true; continue; }
+    if (inNotes) { notesParts.push(text); continue; }
+    if (/aufgaben/i.test(low) && low.indexOf(':') >= 0) { heading = text; continue; }
 
     var first = text.charAt(0);
     var isBox = first === BOX_OPEN || first === BOX_DONE || first === BOX_DONE2;
