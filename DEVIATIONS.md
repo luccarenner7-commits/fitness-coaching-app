@@ -125,7 +125,24 @@ Notizen …). **In den Sheets existiert davon fast nichts.**
       `clasp push` + `clasp deploy -d <deploymentId>` (URL bleibt gleich).
       Bis dahin: Code.gs von Hand kopieren + „Neue Version" bereitstellen.
 
-## 6. Nicht in V1 (laut Konzept, hier nur zur Erinnerung)
+## 6. Branding
+
+- [ ] **Echtes Logo einsetzen.** Aktuell nur Platzhalter: selbst gezeichnete
+      SVG-Icons (`public/icon.svg`, `favicon.svg`, `icon-maskable.svg`) und ein
+      violettes „LP"-Badge in der Sidebar (`src/components/layout/Sidebar.tsx`).
+      Das echte Leo-Pirzer-Logo (Hantel-Symbol + Schriftzug „LEO PIRZER PERSONAL
+      COACHING", schwarz auf weiß) wurde am 04.09. im Chat geteilt und als
+      500×500-JPEG gesichert, aber noch nicht eingebaut — ein automatischer
+      Zuschnitt (nur Symbol, ohne Schriftzug) ist im Browser-Werkzeug
+      gescheitert.
+      Für die Umsetzung fehlt noch eine Entscheidung/bessere Quelle:
+      - Im Chat erneut teilen **oder** als Datei (idealerweise SVG oder PNG mit
+        transparentem Hintergrund, höhere Auflösung als 500×500) bereitstellen.
+      - Klären: komplettes Logo (mit Schriftzug) als Icon, oder nur das
+        Hantel-Symbol freigestellt?
+      Betrifft: Favicon, Apple-Touch-Icon, PWA-Manifest-Icons, Sidebar-Badge.
+
+## 7. Nicht in V1 (laut Konzept, hier nur zur Erinnerung)
 
 KI-Coach, automatische Trainingsplanung, medizinische Analyse/Diagnosen, Chat,
 Push Notifications, Wearables/Apple Health/Strava, Social, Gamification,
