@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Check, Loader2, Plus, Timer } from 'lucide-react';
+import { Check, ChevronDown, Loader2, Plus, Timer } from 'lucide-react';
 import { useRepository } from '@/data';
 import type { SessionLog, SetLog } from '@/domain/types';
 import { cn } from '@/lib/cn';
@@ -35,6 +35,13 @@ function emptyRow(setNumber: number): RowState {
   return { setNumber, weight: null, reps: null, rir: null, confirmed: false, status: 'idle' };
 }
 
+function formatRest(s: number): string {
+  if (s < 60) return `${s}s`;
+  const min = Math.floor(s / 60);
+  const rest = s % 60;
+  return `${min}min${rest ? ` ${rest}s` : ''}`;
+}
+
 export function SetLogger({
   weekId,
   workoutId,
@@ -62,6 +69,7 @@ export function SetLogger({
   const [pain, setPain] = useState<number | null>(sessionLog.painAfter);
   const [painStatus, setPainStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [restSeconds, setRestSecondsState] = useState(() => getRestSeconds(exerciseName));
+  const [restPickerOpen, setRestPickerOpen] = useState(false);
 
   function updateRow(setNumber: number, patch: Partial<Pick<RowState, 'weight' | 'reps' | 'rir'>>) {
     setRows((prev) =>
@@ -126,6 +134,7 @@ export function SetLogger({
   function chooseRest(seconds: number) {
     setRestSecondsState(seconds);
     setRestSeconds(exerciseName, seconds);
+    setRestPickerOpen(false);
   }
 
   const numInput = (
@@ -196,38 +205,48 @@ export function SetLogger({
       </div>
 
       {!readOnly && (
-        <button
-          type="button"
-          onClick={() => setRows((r) => [...r, emptyRow(r.length + 1)])}
-          className="mt-2 flex items-center gap-1 rounded-control px-1.5 py-1 text-xs font-medium text-fg-muted hover:text-fg"
-        >
-          <Plus size={13} aria-hidden />
-          Satz hinzufügen
-        </button>
+        <div className="mt-2 flex items-center justify-between gap-2">
+          <button
+            type="button"
+            onClick={() => setRows((r) => [...r, emptyRow(r.length + 1)])}
+            className="flex items-center gap-1 rounded-control px-1.5 py-1 text-xs font-medium text-fg-muted hover:text-fg"
+          >
+            <Plus size={13} aria-hidden />
+            Satz hinzufügen
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setRestPickerOpen((o) => !o)}
+            aria-expanded={restPickerOpen}
+            aria-label={`Pausendauer, aktuell ${formatRest(restSeconds)}`}
+            className="flex items-center gap-1 rounded-full bg-bg-elevated px-2.5 py-1 text-xs font-medium text-fg-muted hover:text-fg"
+          >
+            <Timer size={13} aria-hidden />
+            {formatRest(restSeconds)}
+            <ChevronDown size={12} className={cn('transition-transform', restPickerOpen && 'rotate-180')} aria-hidden />
+          </button>
+        </div>
       )}
 
-      {!readOnly && (
-        <div className="mt-3 flex items-center gap-2 border-t border-border-soft pt-3">
-          <Timer size={14} className="shrink-0 text-fg-subtle" aria-hidden />
-          <span className="shrink-0 text-xs font-medium text-fg-subtle">Pause</span>
-          <div className="flex gap-1 overflow-x-auto">
-            {REST_PRESETS_SECONDS.map((s) => (
-              <button
-                key={s}
-                type="button"
-                onClick={() => chooseRest(s)}
-                aria-pressed={restSeconds === s}
-                className={cn(
-                  'shrink-0 rounded-full px-2.5 py-1 text-xs font-medium transition-colors',
-                  restSeconds === s
-                    ? 'bg-accent text-on-accent'
-                    : 'bg-bg-elevated text-fg-muted hover:text-fg',
-                )}
-              >
-                {s < 60 ? `${s}s` : `${Math.floor(s / 60)}min${s % 60 ? ` ${s % 60}s` : ''}`}
-              </button>
-            ))}
-          </div>
+      {!readOnly && restPickerOpen && (
+        <div className="mt-2 flex flex-wrap justify-end gap-1 rounded-control bg-bg-elevated p-2">
+          {REST_PRESETS_SECONDS.map((s) => (
+            <button
+              key={s}
+              type="button"
+              onClick={() => chooseRest(s)}
+              aria-pressed={restSeconds === s}
+              className={cn(
+                'shrink-0 rounded-full px-2.5 py-1 text-xs font-medium transition-colors',
+                restSeconds === s
+                  ? 'bg-accent text-on-accent'
+                  : 'bg-surface text-fg-muted hover:text-fg',
+              )}
+            >
+              {formatRest(s)}
+            </button>
+          ))}
         </div>
       )}
 
