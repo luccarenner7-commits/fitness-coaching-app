@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Check, ChevronDown, Loader2, Plus, Timer } from 'lucide-react';
 import { useRepository } from '@/data';
 import type { SessionLog, SetLog } from '@/domain/types';
@@ -71,15 +71,29 @@ export function SetLogger({
   const [restSeconds, setRestSecondsState] = useState(() => getRestSeconds(exerciseName));
   const [restPickerOpen, setRestPickerOpen] = useState(false);
 
+  // Kept in sync with the latest render so async handlers can read current
+  // values after an `await` instead of the stale ones closed over at click
+  // time — a save can take several seconds against the Apps Script backend,
+  // easily long enough for the client to have edited something else meanwhile.
+  const rowsRef = useRef(rows);
+  rowsRef.current = rows;
+  const painRef = useRef(pain);
+  painRef.current = pain;
+
   function updateRow(setNumber: number, patch: Partial<Pick<RowState, 'weight' | 'reps' | 'rir'>>) {
     setRows((prev) =>
       prev.map((r) => (r.setNumber === setNumber ? { ...r, ...patch, confirmed: false } : r)),
     );
   }
 
+  function currentSets(): SetLog[] {
+    return rowsRef.current.map((r) => ({ setNumber: r.setNumber, weight: r.weight, reps: r.reps, rir: r.rir }));
+  }
+
   async function confirmRow(setNumber: number) {
-    const row = rows.find((r) => r.setNumber === setNumber);
+    const row = rowsRef.current.find((r) => r.setNumber === setNumber);
     if (!row) return;
+    const sent = { weight: row.weight, reps: row.reps, rir: row.rir };
     setRows((prev) => prev.map((r) => (r.setNumber === setNumber ? { ...r, status: 'saving' } : r)));
     try {
       await repo.saveExerciseSet({
@@ -90,19 +104,19 @@ export function SetLogger({
         exerciseName,
         sessionIndex,
         setNumber,
-        weight: row.weight,
-        reps: row.reps,
-        rir: row.rir,
+        ...sent,
       });
+      // Only mark it "confirmed" (green check) if nothing changed the row
+      // while the request was in flight — otherwise the UI would show a
+      // saved state for values that were never actually sent.
       setRows((prev) =>
-        prev.map((r) => (r.setNumber === setNumber ? { ...r, confirmed: true, status: 'idle' } : r)),
+        prev.map((r) => {
+          if (r.setNumber !== setNumber) return r;
+          const unchanged = r.weight === sent.weight && r.reps === sent.reps && r.rir === sent.rir;
+          return unchanged ? { ...r, confirmed: true, status: 'idle' } : { ...r, status: 'idle' };
+        }),
       );
-      const updatedSets: SetLog[] = rows.map((r) =>
-        r.setNumber === setNumber
-          ? { setNumber, weight: row.weight, reps: row.reps, rir: row.rir }
-          : { setNumber: r.setNumber, weight: r.weight, reps: r.reps, rir: r.rir },
-      );
-      onChange({ sets: updatedSets, painAfter: pain });
+      onChange({ sets: currentSets(), painAfter: painRef.current });
       onSetConfirmed(restSeconds);
     } catch {
       setRows((prev) => prev.map((r) => (r.setNumber === setNumber ? { ...r, status: 'error' } : r)));
@@ -124,7 +138,7 @@ export function SetLogger({
         pain: next,
       });
       setPainStatus('saved');
-      onChange({ sets: rows.map((r) => ({ setNumber: r.setNumber, weight: r.weight, reps: r.reps, rir: r.rir })), painAfter: next });
+      onChange({ sets: currentSets(), painAfter: next });
       window.setTimeout(() => setPainStatus('idle'), 1500);
     } catch {
       setPainStatus('error');
@@ -179,7 +193,11 @@ export function SetLogger({
             {numInput(row, 'rir', '2')}
             <button
               type="button"
-              disabled={readOnly || row.status === 'saving'}
+              disabled={
+                readOnly ||
+                row.status === 'saving' ||
+                (row.weight == null && row.reps == null && row.rir == null)
+              }
               onClick={() => confirmRow(row.setNumber)}
               aria-label={row.confirmed ? `Satz ${row.setNumber} erneut bestätigen` : `Satz ${row.setNumber} bestätigen`}
               className={cn(
@@ -261,7 +279,7 @@ export function SetLogger({
             <button
               key={n}
               type="button"
-              disabled={readOnly}
+              disabled={readOnly || painStatus === 'saving'}
               onClick={() => selectPain(n)}
               aria-pressed={pain === n}
               className={cn(

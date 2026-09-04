@@ -45,6 +45,43 @@ Stand: 2026-09-04
       einer Einheit komplett übersprungen, bleibt diese Einheit als „aktuell"
       stehen, bis sie doch noch angefasst wird — kein manuelles
       „Einheit abschließen" in V1.
+- [x] **Bugfix 04.09.: Satz-Speichern funktionierte teils nicht.** Von Opus
+      (Deep Review) gefunden, von Sonnet behoben:
+      1. **Kernbug:** „Aktuelle Einheit" wurde bei *jedem* bestätigten Satz neu
+         berechnet (`useMemo` über die live aktualisierten Plandaten). Sobald
+         durch das Bestätigen die letzte Übung des Workouts einen Log in der
+         aktuellen Einheit hatte, sprang die App mitten im Training auf die
+         nächste Einheit um — weitere Sätze landeten dann in der falschen
+         Einheit, bereits eingetragene Sätze der alten Einheit schienen
+         verschwunden. Fix: Einheit wird einmal pro Seitenaufruf eingefroren
+         (`src/app/training/WorkoutPage.tsx`).
+      2. **Race Condition im Backend:** `saveExerciseSet_`/`saveExercisePain_`
+         lasen und schrieben ohne Sperre — zwei nahezu gleichzeitige Aufrufe
+         (z. B. zwei schnelle Tipps auf die Schmerz-Skala) konnten beide „keine
+         vorhandene Zeile" sehen und beide eine neue anhängen → doppelte/leere
+         Zeilen im `Trainingslog`. Fix: `LockService` um die kritischen
+         Abschnitte, Schmerz-Buttons blockieren jetzt auch während des
+         Speicherns (`apps-script/Code.gs`).
+      3. **Stale-Closure-Bug:** Wurde ein Feld während eines noch laufenden
+         Speichervorgangs (der bei kaltem Apps Script mehrere Sekunden dauern
+         kann) erneut geändert, zeigte die App „gespeichert" (grüner Haken) für
+         einen Wert, der nie verschickt wurde. Fix: Abgleich mit dem
+         tatsächlich aktuellen Zeilenstand bei Rückkehr der Anfrage
+         (`src/features/training/SetLogger.tsx`).
+      4. **Datum-Spalte im `Trainingslog`:** wurde beim Lesen fälschlich durch
+         die Datums-Rückrechnung für die Wiederholungen-Spalte des Plans
+         gejagt, konnte zu einem ungültigen Datum und einem Absturz der
+         Verlaufsgrafik führen. Fix: eigener Normalizer für diese Spalte, plus
+         defensiver Fallback in `src/lib/week.ts`.
+      5. **Latenz:** Jeder Satz-Speichervorgang durchsuchte vorher den
+         *gesamten* Kundenordner nur um das Wochen-Label zu lesen — spürbar
+         langsam, sah nach „hängt" aus. Fix: 6h-Cache pro Woche
+         (`CacheService`) in `Code.gs`.
+      6. Kleinere Härtung: komplett leere Sätze lassen sich nicht mehr
+         bestätigen (Backend legt sonst eine unsichtbare Leerzeile an).
+      **Erfordert ein Redeploy von `apps-script/Code.gs`** (neue Version, siehe
+      `apps-script/README.md`) — die Locking-/Cache-/Datums-Fixes sind erst
+      danach live.
 - [ ] **"Belastungssteuerung"-Block** (`Schmerzen während Training 0–10`,
       `Intensität Training 1–10` pro Einheit) ist in der aktuellen Vorlage
       vorhanden, aber in Michaels realen Tabs nicht immer. → V1 liest ihn, wenn

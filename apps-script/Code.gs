@@ -128,6 +128,47 @@ function iso_(d) {
   return Utilities.formatDate(d, 'Europe/Berlin', 'yyyy-MM-dd');
 }
 
+// Every write into the Trainingslog tab used to call weekById_(), which calls
+// listWeeks_() — an enumeration of every subfolder in the customer's Drive
+// folder — just to read one week's label. That (plus assertWeekAllowed_'s own
+// Drive round trip) was most of the multi-second latency on "Satz bestätigen".
+// Cache the {id,label,...} tuple per weekId; a week's folder name never
+// changes after it's created, so a long TTL is safe.
+var WEEK_CACHE_TTL_SECONDS = 21600; // 6h — CacheService's own maximum
+
+function getWeekCached_(weekId) {
+  if (!weekId) throw new Error('weekId fehlt');
+  var cache = CacheService.getScriptCache();
+  var key = 'week:' + weekId;
+  var cached = cache.get(key);
+  if (cached) return JSON.parse(cached);
+  assertWeekAllowed_(weekId);
+  var week = weekById_(weekId);
+  cache.put(key, JSON.stringify(week), WEEK_CACHE_TTL_SECONDS);
+  return week;
+}
+
+/**
+ * Apps Script can run several doPost invocations for the same user
+ * concurrently, and none of the Sheets calls below are atomic on their own.
+ * Every write into the Trainingslog tab does read-all-rows → decide
+ * update-or-append → write, and without a lock two overlapping requests can
+ * both read "no existing row" and both append — producing a duplicate row (or
+ * losing one of the two writes, since appendRow resolves "the next free row"
+ * at write time). Wrap the whole read+decide+write section in a script lock.
+ */
+function withLock_(fn) {
+  var lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    var result = fn();
+    SpreadsheetApp.flush(); // make sure the write is committed before the next request can read
+    return result;
+  } finally {
+    lock.releaseLock();
+  }
+}
+
 /**
  * Guard against IDOR: the Web App runs as the coach, so an unchecked
  * getFolderById(weekId) would reach ANY of the coach's folders. Only allow
@@ -309,6 +350,20 @@ function trainingLogSheet_(ss, create) {
   return sh;
 }
 
+/**
+ * Column A (Datum) only ever holds a plain "YYYY-MM-DD" string we wrote
+ * ourselves — but Sheets auto-converts that into a real Date cell. Reading it
+ * through norm_() would run it through the rep-range Date-reversal hack meant
+ * for the *plan* sheet's "Wiederholungen" column ("6-10" ⇄ Date), turning a
+ * valid date into garbage like "4-9". Format Dates back to ISO instead.
+ */
+function normLogDate_(v) {
+  if (Object.prototype.toString.call(v) === '[object Date]' && !isNaN(v.getTime())) {
+    return iso_(v);
+  }
+  return norm_(v);
+}
+
 function readTrainingLogRows_(ss) {
   var sh = trainingLogSheet_(ss, false);
   if (!sh) return [];
@@ -318,7 +373,7 @@ function readTrainingLogRows_(ss) {
     var row = values[r];
     if (!norm_(row[2]) && !norm_(row[3])) continue;
     rows.push({
-      date: norm_(row[0]),
+      date: normLogDate_(row[0]),
       weekLabel: norm_(row[1]),
       workout: norm_(row[2]),
       exercise: norm_(row[3]),
@@ -389,42 +444,46 @@ function applyLogToWorkouts_(workouts, logRows) {
 
 function saveExerciseSet_(p) {
   requireAll_(p, ['weekId', 'workoutName', 'exerciseName', 'sessionIndex', 'setNumber']);
-  var week = weekById_(p.weekId);
+  var week = getWeekCached_(p.weekId);
   var ssFile = fileInWeek_(p.weekId, CONFIG.fileNames.trainingPlan);
-  var ss = SpreadsheetApp.openById(ssFile.getId());
-  var sh = trainingLogSheet_(ss, true);
   var session = Number(p.sessionIndex) + 1;
   var setNumber = Number(p.setNumber);
-
-  var rows = readTrainingLogRows_(ss);
-  var existing = findLogRow_(rows, p.workoutName, p.exerciseName, session, setNumber);
   var num = function (v) { return v === null || v === undefined || v === '' ? '' : Number(v); };
 
-  upsertLogRow_(sh, existing, [
-    iso_(new Date()), week.label, p.workoutName, p.exerciseName, session, setNumber,
-    num(p.weight), num(p.reps), num(p.rir),
-    existing ? existing.pain : '', // never clobber a pain value saved separately
-  ]);
-  return { saved: true };
+  return withLock_(function () {
+    var ss = SpreadsheetApp.openById(ssFile.getId());
+    var sh = trainingLogSheet_(ss, true);
+    var rows = readTrainingLogRows_(ss);
+    var existing = findLogRow_(rows, p.workoutName, p.exerciseName, session, setNumber);
+
+    upsertLogRow_(sh, existing, [
+      iso_(new Date()), week.label, p.workoutName, p.exerciseName, session, setNumber,
+      num(p.weight), num(p.reps), num(p.rir),
+      existing ? existing.pain : '', // never clobber a pain value saved separately
+    ]);
+    return { saved: true };
+  });
 }
 
 function saveExercisePain_(p) {
   requireAll_(p, ['weekId', 'workoutName', 'exerciseName', 'sessionIndex']);
-  var week = weekById_(p.weekId);
+  var week = getWeekCached_(p.weekId);
   var ssFile = fileInWeek_(p.weekId, CONFIG.fileNames.trainingPlan);
-  var ss = SpreadsheetApp.openById(ssFile.getId());
-  var sh = trainingLogSheet_(ss, true);
   var session = Number(p.sessionIndex) + 1;
-
-  var rows = readTrainingLogRows_(ss);
-  var existing = findLogRow_(rows, p.workoutName, p.exerciseName, session, 0);
   var pain = p.pain === null || p.pain === undefined || p.pain === '' ? '' : Number(p.pain);
 
-  upsertLogRow_(sh, existing, [
-    iso_(new Date()), week.label, p.workoutName, p.exerciseName, session, 0,
-    '', '', '', pain,
-  ]);
-  return { saved: true };
+  return withLock_(function () {
+    var ss = SpreadsheetApp.openById(ssFile.getId());
+    var sh = trainingLogSheet_(ss, true);
+    var rows = readTrainingLogRows_(ss);
+    var existing = findLogRow_(rows, p.workoutName, p.exerciseName, session, 0);
+
+    upsertLogRow_(sh, existing, [
+      iso_(new Date()), week.label, p.workoutName, p.exerciseName, session, 0,
+      '', '', '', pain,
+    ]);
+    return { saved: true };
+  });
 }
 
 /** Weight-over-time for one exercise, scanning recent weeks (newest first, capped). */

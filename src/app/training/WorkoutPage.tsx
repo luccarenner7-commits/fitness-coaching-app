@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import type { SessionLog } from '@/domain/types';
@@ -40,15 +40,32 @@ export function WorkoutPage() {
    * across every exercise in the workout, i.e. today's visit. If a client
    * skips an exercise entirely for a visit, that session stays "current"
    * until it's touched (see DEVIATIONS.md).
+   *
+   * Frozen for the lifetime of this page visit (per weekId+workoutId), NOT
+   * recomputed from every optimistic update. It used to be a plain useMemo
+   * over `workout`, which meant that confirming a set could — the instant it
+   * made every exercise "have a log" for the current session — flip this to
+   * the next session mid-workout, silently redirecting every subsequent tap
+   * to a different Einheit and making already-entered sets in a still-open
+   * card appear to vanish. Reload the page to move on to the next Einheit.
    */
+  const frozenSession = useRef<{ key: string; index: number }>();
   const currentSessionIndex = useMemo(() => {
     if (!workout || workout.sessionCount === 0) return 0;
+    const key = `${weekId}:${workoutId}`;
+    if (frozenSession.current?.key === key) return frozenSession.current.index;
     const exercises = workout.rows.filter((r) => r.kind === 'exercise').map((r) => r.exercise);
+    let index = workout.sessionCount - 1;
     for (let i = 0; i < workout.sessionCount; i++) {
-      if (!exercises.every((ex) => sessionHasLog(ex.sessionLogs[i]))) return i;
+      if (!exercises.every((ex) => sessionHasLog(ex.sessionLogs[i]))) {
+        index = i;
+        break;
+      }
     }
-    return workout.sessionCount - 1;
-  }, [workout]);
+    frozenSession.current = { key, index };
+    return index;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [workout, weekId, workoutId]);
 
   function handleSessionLogChange(exerciseId: string, sessionIndex: number, log: SessionLog) {
     plan.setData((prev) => {

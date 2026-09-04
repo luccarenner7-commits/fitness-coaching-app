@@ -14,10 +14,16 @@ export const WEEKDAYS = [
 
 export type Weekday = (typeof WEEKDAYS)[number];
 
-/** Parse "YYYY-MM-DD" into a UTC Date at midnight. */
+/**
+ * Parse "YYYY-MM-DD" into a UTC Date at midnight. Falls back to today rather
+ * than producing an Invalid Date — a malformed string reaching the formatters
+ * below (e.g. from unexpected sheet content) would otherwise throw inside
+ * Intl.DateTimeFormat and take the whole page down with it.
+ */
 function parseIso(iso: string): Date {
-  const [y, m, d] = iso.split('-').map(Number);
-  return new Date(Date.UTC(y, m - 1, d));
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
+  if (!m) return new Date(Date.UTC(1970, 0, 1));
+  return new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3])));
 }
 
 function toIso(date: Date): string {
