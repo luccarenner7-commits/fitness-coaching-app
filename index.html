@@ -15,6 +15,30 @@
     <meta name="apple-mobile-web-app-title" content="LP Coaching" />
     <meta name="color-scheme" content="dark" />
     <title>Leo Pirzer Coaching</title>
+    <script>
+      // Self-heal: an earlier build shipped a service worker whose stale cache
+      // could blank the page on some devices. Remove any SW + caches, once.
+      (function () {
+        if (!('serviceWorker' in navigator)) return;
+        navigator.serviceWorker.getRegistrations().then(function (regs) {
+          if (!regs.length) return;
+          Promise.all(regs.map(function (r) { return r.unregister(); }))
+            .then(function () {
+              return window.caches
+                ? caches.keys().then(function (keys) {
+                    return Promise.all(keys.map(function (k) { return caches.delete(k); }));
+                  })
+                : null;
+            })
+            .then(function () {
+              if (!sessionStorage.getItem('sw-cleared')) {
+                sessionStorage.setItem('sw-cleared', '1');
+                location.reload();
+              }
+            });
+        });
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

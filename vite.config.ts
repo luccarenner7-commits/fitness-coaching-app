@@ -18,20 +18,17 @@ export default defineConfig({
   plugins: [
     react(),
     tailwindcss(),
+    // No real caching in V1 — a stale SW cache blanked the page on some devices.
+    // `selfDestroying` ships a SW that unregisters itself and wipes caches, so
+    // any device still holding an old worker heals on its next visit. The
+    // manifest still allows "add to home screen". Real offline caching = backlog.
     VitePWA({
-      registerType: 'autoUpdate',
-      // Ship a service worker that unregisters any previously installed one and
-      // clears its caches. An early deploy cached a broken/empty shell for some
-      // clients ("black screen"); this cleans them up. A real caching SW comes
-      // back in the polish phase.
       selfDestroying: true,
-      includeAssets: ['favicon.svg', 'icon.svg'],
       manifest: {
         name: 'Leo Pirzer Coaching',
         short_name: 'LP Coaching',
         description: 'Trainingsplan, Trainingsdaten, Schmerztagebuch und ToDos.',
         lang: 'de',
-        dir: 'ltr',
         theme_color: '#0a0e1a',
         background_color: '#0a0e1a',
         display: 'standalone',
@@ -43,11 +40,6 @@ export default defineConfig({
           { src: 'icon-maskable.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'maskable' },
         ],
       },
-      workbox: {
-        navigateFallback: base + 'index.html',
-        globPatterns: ['**/*.{js,css,html,svg,woff2}'],
-      },
-      devOptions: { enabled: false },
     }),
   ],
 });
