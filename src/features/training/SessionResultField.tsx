@@ -61,13 +61,15 @@ export function SessionResultField({
     <label className="block">
       <span className="mb-1 flex items-center justify-between text-xs font-medium text-fg-subtle">
         {label}
-        {status === 'saving' && <Loader2 size={13} className="animate-spin" aria-hidden />}
-        {status === 'saved' && (
-          <span className="flex items-center gap-1 text-success">
-            <Check size={13} aria-hidden /> gespeichert
-          </span>
-        )}
-        {status === 'error' && <span className="text-danger">nicht gespeichert</span>}
+        <span aria-live="polite" className="flex items-center gap-1">
+          {status === 'saving' && <Loader2 size={13} className="animate-spin" aria-hidden />}
+          {status === 'saved' && (
+            <span className="flex items-center gap-1 text-success">
+              <Check size={13} aria-hidden /> gespeichert
+            </span>
+          )}
+          {status === 'error' && <span className="text-danger">nicht gespeichert</span>}
+        </span>
       </span>
       <input
         type="text"

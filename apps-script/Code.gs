@@ -20,6 +20,9 @@ var CONFIG = {
     painDiary: 'Schmerztagebuch',
     todos: 'Checkliste',
   },
+  // Optional: wenn gesetzt, muss jeder Aufruf ?token=... mitschicken
+  // (im Frontend VITE_APPS_SCRIPT_TOKEN). Leer lassen = offen (nur Testdaten).
+  sharedToken: '',
 };
 
 var WEEKDAYS = [
@@ -48,6 +51,9 @@ function doPost(e) {
 function handle_(e, p) {
   var action = p.action || 'ping';
   try {
+    if (CONFIG.sharedToken && action !== 'ping' && p.token !== CONFIG.sharedToken) {
+      throw new Error('Nicht autorisiert');
+    }
     var result;
     switch (action) {
       case 'ping':            result = { ok: true, customer: CONFIG.customerName }; break;
@@ -118,7 +124,22 @@ function iso_(d) {
   return Utilities.formatDate(d, 'Europe/Berlin', 'yyyy-MM-dd');
 }
 
+/**
+ * Guard against IDOR: the Web App runs as the coach, so an unchecked
+ * getFolderById(weekId) would reach ANY of the coach's folders. Only allow
+ * direct children of the configured customer folder.
+ */
+function assertWeekAllowed_(weekId) {
+  if (!weekId) throw new Error('weekId fehlt');
+  var parents = DriveApp.getFolderById(weekId).getParents();
+  while (parents.hasNext()) {
+    if (parents.next().getId() === CONFIG.customerFolderId) return;
+  }
+  throw new Error('Zugriff verweigert');
+}
+
 function fileInWeek_(weekId, name) {
+  assertWeekAllowed_(weekId);
   var folder = DriveApp.getFolderById(weekId);
   var it = folder.getFilesByName(name);
   if (!it.hasNext()) throw new Error('Datei "' + name + '" fehlt in diesem Wochenordner');

@@ -3,6 +3,7 @@
 
 interface ImportMetaEnv {
   readonly VITE_APPS_SCRIPT_URL?: string;
+  readonly VITE_APPS_SCRIPT_TOKEN?: string;
   readonly VITE_BASE?: string;
 }
 

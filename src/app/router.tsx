@@ -1,5 +1,6 @@
 import { createHashRouter, Navigate } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
+import { RouteError } from '@/app/RouteError';
 import { DashboardPage } from '@/app/dashboard/DashboardPage';
 import { TrainingPage } from '@/app/training/TrainingPage';
 import { WorkoutPage } from '@/app/training/WorkoutPage';
@@ -15,6 +16,7 @@ export const router = createHashRouter([
   {
     path: '/',
     element: <AppLayout />,
+    errorElement: <RouteError />,
     children: [
       { index: true, element: <DashboardPage /> },
       { path: 'training', element: <TrainingPage /> },

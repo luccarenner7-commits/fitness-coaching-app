@@ -96,6 +96,12 @@ Notizen …). **In den Sheets existiert davon fast nichts.**
       geheimen Google-Credentials halten. → Backend-Ansatz muss geklärt werden
       (siehe `docs/ARCHITECTURE-DECISION.md`).
 - [ ] Kein Echtzeit-Sync, kein Offline-Modus in V1 (so auch im Konzept).
+- [ ] **Service Worker / echtes PWA-Caching** ist aktuell deaktiviert
+      (`selfDestroying`), nachdem ein früher Deploy einen kaputten Cache
+      hinterlassen hatte. Manifest + „zum Homescreen hinzufügen" funktionieren.
+      Ein sauberer Caching-SW (Offline-Shell, Update-Flow) kommt später zurück.
+- [ ] **Sicherheit:** Details und Backlog in `docs/SECURITY.md`. Kernpunkt:
+      echte Auth + Kundentrennung vor dem ersten echten Kunden.
 
 ## 6. Nicht in V1 (laut Konzept, hier nur zur Erinnerung)
 

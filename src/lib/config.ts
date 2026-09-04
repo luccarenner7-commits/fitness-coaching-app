@@ -12,6 +12,9 @@ export const APP_VERSION = '0.1.0';
 /** URL of the deployed Google Apps Script Web App (set in Phase 4). */
 export const APPS_SCRIPT_URL: string = import.meta.env.VITE_APPS_SCRIPT_URL ?? '';
 
+/** Optional shared token — only needed if CONFIG.sharedToken is set in the backend. */
+export const APPS_SCRIPT_TOKEN: string = import.meta.env.VITE_APPS_SCRIPT_TOKEN ?? '';
+
 export const TEST_CUSTOMER = {
   id: 'testkunde',
   displayName: 'Testkunde (App)',

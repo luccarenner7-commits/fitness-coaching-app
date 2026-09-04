@@ -86,6 +86,9 @@ export function DashboardPage() {
       <SectionLabel>Offene ToDos</SectionLabel>
       <Card className="mb-6">
         {todos.loading && <div className="h-12 animate-pulse rounded-control bg-surface-raised" />}
+        {todos.error && !todos.loading && (
+          <p className="text-sm text-fg-subtle">ToDos konnten nicht geladen werden.</p>
+        )}
         {todos.data && openTodos.length === 0 && (
           <p className="text-sm text-fg-muted">Alles erledigt für diese Woche. 🎉</p>
         )}
@@ -114,6 +117,9 @@ export function DashboardPage() {
       <SectionLabel>Schmerzübersicht</SectionLabel>
       <Card>
         {pain.loading && <div className="h-12 animate-pulse rounded-control bg-surface-raised" />}
+        {pain.error && !pain.loading && (
+          <p className="text-sm text-fg-subtle">Schmerzdaten konnten nicht geladen werden.</p>
+        )}
         {pain.data && (
           <div className="flex items-end justify-between">
             <div>

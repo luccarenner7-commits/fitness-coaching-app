@@ -34,6 +34,7 @@ jobs:
           # GitHub Pages serves the project at /<repo>/
           VITE_BASE: /${{ github.event.repository.name }}/
           VITE_APPS_SCRIPT_URL: ${{ vars.VITE_APPS_SCRIPT_URL }}
+          VITE_APPS_SCRIPT_TOKEN: ${{ vars.VITE_APPS_SCRIPT_TOKEN }}
 
       - uses: actions/configure-pages@v5
 

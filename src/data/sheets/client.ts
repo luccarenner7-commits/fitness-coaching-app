@@ -1,3 +1,5 @@
+import { APPS_SCRIPT_TOKEN } from '@/lib/config';
+
 /**
  * Thin client for the Google Apps Script Web App.
  *
@@ -21,6 +23,7 @@ export class AppsScriptClient {
   async get<T>(action: string, params: Record<string, string> = {}): Promise<T> {
     const url = new URL(this.baseUrl);
     url.searchParams.set('action', action);
+    if (APPS_SCRIPT_TOKEN) url.searchParams.set('token', APPS_SCRIPT_TOKEN);
     for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
     const res = await fetch(url.toString(), { method: 'GET', redirect: 'follow' });
     return this.unwrap<T>(res);
@@ -32,7 +35,11 @@ export class AppsScriptClient {
       redirect: 'follow',
       // text/plain keeps this a "simple request" — no preflight.
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({ action, ...payload }),
+      body: JSON.stringify({
+        action,
+        ...(APPS_SCRIPT_TOKEN ? { token: APPS_SCRIPT_TOKEN } : {}),
+        ...payload,
+      }),
     });
     return this.unwrap<T>(res);
   }
