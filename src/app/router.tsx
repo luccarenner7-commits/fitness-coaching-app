@@ -2,6 +2,7 @@ import { createHashRouter, Navigate } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { DashboardPage } from '@/app/dashboard/DashboardPage';
 import { TrainingPage } from '@/app/training/TrainingPage';
+import { WorkoutPage } from '@/app/training/WorkoutPage';
 import { PainPage } from '@/app/pain/PainPage';
 import { TodosPage } from '@/app/todos/TodosPage';
 import { SettingsPage } from '@/app/settings/SettingsPage';
@@ -17,6 +18,7 @@ export const router = createHashRouter([
     children: [
       { index: true, element: <DashboardPage /> },
       { path: 'training', element: <TrainingPage /> },
+      { path: 'training/:weekId/:workoutId', element: <WorkoutPage /> },
       { path: 'schmerz', element: <PainPage /> },
       { path: 'todos', element: <TodosPage /> },
       { path: 'einstellungen', element: <SettingsPage /> },

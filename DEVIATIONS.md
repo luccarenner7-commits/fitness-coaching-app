@@ -31,6 +31,15 @@ Stand: 2026-09-04
       → Parser muss tolerant sein. Optional später: bereinigte Vorlagen.
 - [ ] **Automatische Gewichtsprogression / Trainingsplananpassung** – bewusst
       nicht in V1 (steht auch so im Konzept).
+- [ ] **"Training abgeschlossen"-Markierung.** Das Konzept möchte einen
+      "Training abschließen"-Button. Im Sheet gibt es dafür kein Feld. V1 zeigt
+      stattdessen pro Einheit einen Fortschritt (x/n Übungen erfasst); es wird
+      nichts Zusätzliches geschrieben. Backlog: eigene Spalte/Statusfeld.
+- [ ] **Trainings-Kommentarfeld** ("Zusätzliche Kommentare können optional
+      vorgesehen werden"). Kein Sheet-Feld dafür → Backlog.
+- [ ] **View-only-Pläne:** Tabs ohne "Einheit"-Spalten (z. B. "Urlaub",
+      "Homeworkout") können in der App nur angesehen werden – es gibt keine
+      Zelle zum Reinschreiben.
 
 ## 2. Schmerztagebuch
 
