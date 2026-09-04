@@ -102,6 +102,14 @@ Notizen …). **In den Sheets existiert davon fast nichts.**
       Ein sauberer Caching-SW (Offline-Shell, Update-Flow) kommt später zurück.
 - [ ] **Sicherheit:** Details und Backlog in `docs/SECURITY.md`. Kernpunkt:
       echte Auth + Kundentrennung vor dem ersten echten Kunden.
+- [ ] **`clasp` einrichten**, damit Änderungen am Apps-Script-Backend nicht mehr
+      von Hand in den Editor kopiert werden müssen. `@google/clasp` ist bereits
+      als devDependency drin. Einmalig nötig: `npx clasp login` (Browser-Auth mit
+      dem Google-Konto des Coaches), Apps-Script-API aktivieren unter
+      https://script.google.com/home/usersettings, Script-ID aus den
+      Projekteinstellungen. Dann `apps-script/.clasp.json` anlegen und künftig
+      `clasp push` + `clasp deploy -d <deploymentId>` (URL bleibt gleich).
+      Bis dahin: Code.gs von Hand kopieren + „Neue Version" bereitstellen.
 
 ## 6. Nicht in V1 (laut Konzept, hier nur zur Erinnerung)
 

@@ -421,11 +421,13 @@ function getTodos_(weekId) {
     // boilerplate that is never a task or a note
     if (/leopirzercoaching/i.test(low)) continue;
     if (/^checkliste/i.test(low)) continue;
-    if (/woche\s*:/i.test(low) || /name\s*:/i.test(low)) continue;
 
     if (/^notizen/i.test(low)) { inNotes = true; continue; }
     if (inNotes) { notesParts.push(text); continue; }
     if (/aufgaben/i.test(low) && low.indexOf(':') >= 0) { heading = text; continue; }
+
+    // template field line "Name: ____  Woche: ____"
+    if (/name\s*:/i.test(low) && /woche\s*:/i.test(low)) continue;
 
     var first = text.charAt(0);
     var isBox = first === BOX_OPEN || first === BOX_DONE || first === BOX_DONE2;
