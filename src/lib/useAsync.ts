@@ -5,6 +5,8 @@ export interface AsyncState<T> {
   data: T | undefined;
   loading: boolean;
   error: Error | undefined;
+  /** When the current data last loaded successfully (ms epoch), or undefined. */
+  updatedAt: number | undefined;
   /** Re-run the loader. */
   reload: () => void;
   /** Optimistically replace the current data without a reload. */
@@ -19,6 +21,7 @@ export function useAsync<T>(loader: () => Promise<T>, deps: unknown[]): AsyncSta
   const [data, setData] = useState<T>();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error>();
+  const [updatedAt, setUpdatedAt] = useState<number>();
   const [nonce, setNonce] = useState(0);
   const loaderRef = useRef(loader);
   loaderRef.current = loader;
@@ -30,7 +33,10 @@ export function useAsync<T>(loader: () => Promise<T>, deps: unknown[]): AsyncSta
     loaderRef
       .current()
       .then((result) => {
-        if (alive) setData(result);
+        if (alive) {
+          setData(result);
+          setUpdatedAt(Date.now());
+        }
       })
       .catch((err: unknown) => {
         if (alive) setError(err instanceof Error ? err : new Error(String(err)));
@@ -46,5 +52,5 @@ export function useAsync<T>(loader: () => Promise<T>, deps: unknown[]): AsyncSta
 
   const reload = useCallback(() => setNonce((n) => n + 1), []);
 
-  return { data, loading, error, reload, setData };
+  return { data, loading, error, updatedAt, reload, setData };
 }

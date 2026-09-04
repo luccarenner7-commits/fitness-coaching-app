@@ -5,6 +5,7 @@ import { useAsync } from '@/lib/useAsync';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { SectionLabel } from '@/components/ui/Card';
 import { ErrorBlock, LoadingBlock } from '@/components/ui/StatusViews';
+import { RefreshBar } from '@/components/ui/RefreshBar';
 import { WorkoutRowLink } from '@/features/training/WorkoutRowLink';
 import { formatWeekRange } from '@/lib/week';
 
@@ -28,6 +29,15 @@ export function TrainingPage() {
             ? `${currentWeek.label} · ${formatWeekRange(currentWeek.startDate, currentWeek.endDate)}`
             : undefined
         }
+      />
+
+      <RefreshBar
+        updatedAt={currentPlan.updatedAt}
+        loading={weeks.loading || currentPlan.loading}
+        onRefresh={() => {
+          weeks.reload();
+          currentPlan.reload();
+        }}
       />
 
       {(weeks.loading || currentPlan.loading) && <LoadingBlock lines={3} />}

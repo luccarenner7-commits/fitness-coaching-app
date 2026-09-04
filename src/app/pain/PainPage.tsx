@@ -5,6 +5,7 @@ import type { PainDay } from '@/domain/types';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card, SectionLabel } from '@/components/ui/Card';
 import { ErrorBlock, LoadingBlock } from '@/components/ui/StatusViews';
+import { RefreshBar } from '@/components/ui/RefreshBar';
 import { PainDayRow } from '@/features/pain/PainDayRow';
 import { PainTrend, leadingNumber } from '@/features/pain/PainTrend';
 import { formatWeekRange } from '@/lib/week';
@@ -59,6 +60,15 @@ export function PainPage() {
             ? `${activeWeek.label} · ${formatWeekRange(activeWeek.startDate, activeWeek.endDate)}`
             : undefined
         }
+      />
+
+      <RefreshBar
+        updatedAt={diary.updatedAt}
+        loading={weeks.loading || diary.loading}
+        onRefresh={() => {
+          weeks.reload();
+          diary.reload();
+        }}
       />
 
       {weeks.data && weeks.data.length > 1 && (

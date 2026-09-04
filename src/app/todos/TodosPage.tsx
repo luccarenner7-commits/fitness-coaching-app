@@ -7,6 +7,7 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { Card, SectionLabel } from '@/components/ui/Card';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorBlock, LoadingBlock } from '@/components/ui/StatusViews';
+import { RefreshBar } from '@/components/ui/RefreshBar';
 import { TodoRow } from '@/features/todos/TodoRow';
 
 export function TodosPage() {
@@ -43,6 +44,15 @@ export function TodosPage() {
             ? `${done.length}/${todos.data.items.length} erledigt`
             : 'Aufgaben aus deiner Checkliste'
         }
+      />
+
+      <RefreshBar
+        updatedAt={todos.updatedAt}
+        loading={weeks.loading || todos.loading}
+        onRefresh={() => {
+          weeks.reload();
+          todos.reload();
+        }}
       />
 
       {(weeks.loading || todos.loading) && <LoadingBlock lines={3} />}

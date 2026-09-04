@@ -102,6 +102,9 @@ Notizen …). **In den Sheets existiert davon fast nichts.**
       Ein sauberer Caching-SW (Offline-Shell, Update-Flow) kommt später zurück.
 - [ ] **Sicherheit:** Details und Backlog in `docs/SECURITY.md`. Kernpunkt:
       echte Auth + Kundentrennung vor dem ersten echten Kunden.
+- [ ] **Browser-Untergrenze:** Tailwind 4 braucht aktuelle Browser (~Safari 16.4+,
+      Chrome 111+, Firefox 128+). Meldet ein Kunde eine unformatierte Seite auf
+      einem älteren Gerät → auf Tailwind 3 zurückwechseln.
 - [ ] **`clasp` einrichten**, damit Änderungen am Apps-Script-Backend nicht mehr
       von Hand in den Editor kopiert werden müssen. `@google/clasp` ist bereits
       als devDependency drin. Einmalig nötig: `npx clasp login` (Browser-Auth mit

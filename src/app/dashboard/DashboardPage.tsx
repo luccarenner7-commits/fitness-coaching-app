@@ -1,9 +1,10 @@
 import { Link } from 'react-router-dom';
-import { ArrowRight, CheckSquare, Dumbbell, HeartPulse } from 'lucide-react';
+import { CheckSquare, ChevronRight, Dumbbell, HeartPulse } from 'lucide-react';
 import { useRepository } from '@/data';
 import { useAsync } from '@/lib/useAsync';
 import { Card, SectionLabel } from '@/components/ui/Card';
 import { LoadingBlock, ErrorBlock } from '@/components/ui/StatusViews';
+import { RefreshBar } from '@/components/ui/RefreshBar';
 import { leadingNumber } from '@/features/pain/PainTrend';
 import { currentWeekdayLabel, formatLongDate, todayIso } from '@/lib/week';
 
@@ -30,7 +31,15 @@ export function DashboardPage() {
   if (weeks.loading) return <LoadingBlock lines={4} />;
   if (weeks.error) return <ErrorBlock error={weeks.error} onRetry={weeks.reload} />;
 
-  const primaryWorkout = plan.data?.workouts[0];
+  const refreshAll = () => {
+    weeks.reload();
+    plan.reload();
+    todos.reload();
+    pain.reload();
+  };
+  const busy = plan.loading || todos.loading || pain.loading;
+
+  const workouts = plan.data?.workouts ?? [];
   const openTodos = (todos.data?.items ?? []).filter((i) => !i.done);
   const painDays = pain.data?.days ?? [];
   const todayPain = painDays.find((d) => d.weekday === currentWeekdayLabel());
@@ -42,45 +51,46 @@ export function DashboardPage() {
 
   return (
     <>
-      <header className="mb-6">
+      <header className="mb-4">
         <p className="mb-1 text-xs font-medium uppercase tracking-wide text-fg-subtle">
           Heute · {todayLong}
         </p>
         <h1 className="text-2xl font-semibold tracking-tight">Übersicht</h1>
       </header>
 
+      <RefreshBar updatedAt={plan.updatedAt} loading={busy} onRefresh={refreshAll} />
+
       {/* Training */}
-      <SectionLabel>Training</SectionLabel>
-      <Card className="mb-6">
-        {plan.loading && <div className="h-16 animate-pulse rounded-control bg-surface-raised" />}
+      <SectionLabel>Training{week ? ` · ${week.label}` : ''}</SectionLabel>
+      <div className="mb-6 space-y-2">
+        {plan.loading && <div className="h-16 animate-pulse rounded-card bg-surface-raised" />}
         {plan.error && !plan.loading && <ErrorBlock error={plan.error} onRetry={plan.reload} />}
-        {primaryWorkout && week && (
-          <>
-            <p className="text-xs text-fg-subtle">{week.label}</p>
-            <p className="mt-0.5 text-lg font-semibold text-fg">{primaryWorkout.name}</p>
-            <p className="mt-0.5 text-sm text-fg-muted">
-              {primaryWorkout.rows.filter((r) => r.kind === 'exercise').length} Übungen
-              {primaryWorkout.sessionCount > 0 && ` · ${primaryWorkout.sessionCount} Einheiten`}
-            </p>
+        {week &&
+          workouts.map((w) => (
             <Link
-              to={`/training/${week.id}/${primaryWorkout.id}`}
-              className="mt-4 inline-flex min-h-[2.875rem] w-full items-center justify-center gap-2 rounded-control bg-accent px-4 text-sm font-semibold text-on-accent transition-colors hover:bg-accent-strong"
+              key={w.id}
+              to={`/training/${week.id}/${w.id}`}
+              className="flex items-center gap-3 rounded-card border border-border-soft bg-surface p-4 transition-colors hover:border-border"
             >
-              <Dumbbell size={16} aria-hidden />
-              Training öffnen
+              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-control bg-accent-soft/10 text-accent-soft">
+                <Dumbbell size={18} aria-hidden />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-medium leading-snug text-fg">{w.name}</span>
+                <span className="mt-0.5 block text-xs text-fg-subtle">
+                  {w.rows.filter((r) => r.kind === 'exercise').length} Übungen
+                  {w.sessionCount > 0 && ` · ${w.sessionCount} Einheiten`}
+                </span>
+              </span>
+              <ChevronRight size={18} className="shrink-0 text-fg-subtle" aria-hidden />
             </Link>
-            {plan.data && plan.data.workouts.length > 1 && (
-              <Link
-                to="/training"
-                className="mt-2 flex items-center justify-center gap-1 py-1 text-xs text-fg-muted hover:text-fg"
-              >
-                Alle {plan.data.workouts.length} Trainingsvarianten
-                <ArrowRight size={13} aria-hidden />
-              </Link>
-            )}
-          </>
+          ))}
+        {plan.data && workouts.length === 0 && (
+          <Card>
+            <p className="text-sm text-fg-muted">Für diese Woche ist noch kein Plan hinterlegt.</p>
+          </Card>
         )}
-      </Card>
+      </div>
 
       {/* ToDos */}
       <SectionLabel>Offene ToDos</SectionLabel>
@@ -124,9 +134,7 @@ export function DashboardPage() {
           <div className="flex items-end justify-between">
             <div>
               <p className="text-xs text-fg-subtle">{pain.data.valueLabel} · heute</p>
-              <p className="mt-0.5 text-2xl font-semibold text-fg">
-                {todayPain?.value ?? '–'}
-              </p>
+              <p className="mt-0.5 text-2xl font-semibold text-fg">{todayPain?.value ?? '–'}</p>
             </div>
             <div className="text-right">
               <p className="text-xs text-fg-subtle">Ø Woche</p>
