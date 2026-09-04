@@ -20,6 +20,11 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
+      // Ship a service worker that unregisters any previously installed one and
+      // clears its caches. An early deploy cached a broken/empty shell for some
+      // clients ("black screen"); this cleans them up. A real caching SW comes
+      // back in the polish phase.
+      selfDestroying: true,
       includeAssets: ['favicon.svg', 'icon.svg'],
       manifest: {
         name: 'Leo Pirzer Coaching',
