@@ -1,12 +1,19 @@
 import { createContext, useContext } from 'react';
 import type { CoachingRepository } from './repository';
 import { MockRepository } from './mock/MockRepository';
+import { SheetsRepository } from './sheets/SheetsRepository';
+import { APPS_SCRIPT_URL } from '@/lib/config';
 
 /**
- * The single place that decides which data source is live.
- * V1 = mock. Phase 4 swaps this for `new SheetsRepository(APPS_SCRIPT_URL)`.
+ * The single place that decides which data source is live:
+ *  - VITE_APPS_SCRIPT_URL set  → live Google Sheets (via the Apps Script backend)
+ *  - otherwise                 → in-memory mock data
  */
-export const repository: CoachingRepository = new MockRepository();
+export const dataSource: 'sheets' | 'mock' = APPS_SCRIPT_URL ? 'sheets' : 'mock';
+
+export const repository: CoachingRepository = APPS_SCRIPT_URL
+  ? new SheetsRepository(APPS_SCRIPT_URL)
+  : new MockRepository();
 
 const RepositoryContext = createContext<CoachingRepository>(repository);
 

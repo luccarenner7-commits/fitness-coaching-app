@@ -1,6 +1,7 @@
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card, SectionLabel } from '@/components/ui/Card';
 import { APP_VERSION, TEST_CUSTOMER } from '@/lib/config';
+import { dataSource } from '@/data';
 
 export function SettingsPage() {
   return (
@@ -30,7 +31,9 @@ export function SettingsPage() {
           </div>
           <div className="flex justify-between gap-4">
             <dt className="text-fg-muted">Datenquelle</dt>
-            <dd className="text-right font-medium">Google Sheets</dd>
+            <dd className="text-right font-medium">
+              {dataSource === 'sheets' ? 'Google Sheets (live)' : 'Mock-Daten'}
+            </dd>
           </div>
         </dl>
       </Card>

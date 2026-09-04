@@ -18,6 +18,7 @@ export const router = createHashRouter([
     children: [
       { index: true, element: <DashboardPage /> },
       { path: 'training', element: <TrainingPage /> },
+      { path: 'training/:weekId', element: <WorkoutPage /> },
       { path: 'training/:weekId/:workoutId', element: <WorkoutPage /> },
       { path: 'schmerz', element: <PainPage /> },
       { path: 'todos', element: <TodosPage /> },

@@ -4,17 +4,20 @@ import { ArrowLeft } from 'lucide-react';
 import { useRepository } from '@/data';
 import { useAsync } from '@/lib/useAsync';
 import { ErrorBlock, LoadingBlock } from '@/components/ui/StatusViews';
+import { SectionLabel } from '@/components/ui/Card';
 import { ExerciseCard } from '@/features/training/ExerciseCard';
+import { WorkoutRowLink } from '@/features/training/WorkoutRowLink';
+import { formatWeekRange } from '@/lib/week';
 
 export function WorkoutPage() {
   const repo = useRepository();
-  const { weekId = '', workoutId = '' } = useParams();
+  const { weekId = '', workoutId } = useParams();
 
   const weeks = useAsync(() => repo.getWeeks(), []);
   const plan = useAsync(() => repo.getTrainingPlan(weekId), [weekId]);
 
   const week = weeks.data?.find((w) => w.id === weekId);
-  const workout = plan.data?.workouts.find((w) => w.id === workoutId);
+  const workout = workoutId ? plan.data?.workouts.find((w) => w.id === workoutId) : undefined;
   const readOnly = week ? !week.isCurrent : false;
 
   const sessionSummary = useMemo(() => {
@@ -38,6 +41,8 @@ export function WorkoutPage() {
     });
   }
 
+  const loading = weeks.loading || plan.loading;
+
   return (
     <>
       <Link
@@ -48,10 +53,29 @@ export function WorkoutPage() {
         Training
       </Link>
 
-      {(weeks.loading || plan.loading) && <LoadingBlock lines={4} />}
-      {plan.error && <ErrorBlock error={plan.error} onRetry={plan.reload} />}
+      {loading && <LoadingBlock lines={4} />}
+      {plan.error && !plan.loading && <ErrorBlock error={plan.error} onRetry={plan.reload} />}
 
-      {workout && week && (
+      {/* Week overview: no workout selected */}
+      {!loading && !plan.error && week && !workoutId && plan.data && (
+        <>
+          <header className="mb-5">
+            <p className="text-xs font-medium uppercase tracking-wide text-fg-subtle">
+              {formatWeekRange(week.startDate, week.endDate)}
+            </p>
+            <h1 className="mt-1 text-2xl font-semibold tracking-tight">{week.label}</h1>
+          </header>
+          <SectionLabel>Trainingsvarianten</SectionLabel>
+          <div className="space-y-3">
+            {plan.data.workouts.map((w) => (
+              <WorkoutRowLink key={w.id} week={week} plan={plan.data!} workoutId={w.id} />
+            ))}
+          </div>
+        </>
+      )}
+
+      {/* Single workout */}
+      {!loading && workout && week && (
         <>
           <header className="mb-5">
             <p className="text-xs font-medium uppercase tracking-wide text-fg-subtle">
@@ -92,7 +116,7 @@ export function WorkoutPage() {
                   key={row.exercise.id}
                   exercise={row.exercise}
                   weekId={weekId}
-                  workoutId={workoutId}
+                  workoutId={workout.id}
                   sessionCount={workout.sessionCount}
                   readOnly={readOnly}
                   onResultSaved={handleResultSaved}
@@ -108,7 +132,7 @@ export function WorkoutPage() {
         </>
       )}
 
-      {!plan.loading && !plan.error && weeks.data && !workout && (
+      {!loading && !plan.error && plan.data && weeks.data && workoutId && !workout && (
         <ErrorBlock error={new Error('Dieses Training gibt es nicht.')} />
       )}
     </>
