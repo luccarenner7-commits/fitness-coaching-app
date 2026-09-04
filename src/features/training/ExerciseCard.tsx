@@ -1,31 +1,47 @@
 import { useState } from 'react';
 import { ChevronDown, Info } from 'lucide-react';
-import type { Exercise } from '@/domain/types';
+import type { Exercise, SessionLog } from '@/domain/types';
 import { cn } from '@/lib/cn';
-import { SessionResultField } from './SessionResultField';
+import { loggedSetCount, sessionHasLog } from '@/lib/trainingLog';
+import { SetLogger } from './SetLogger';
+import { ExerciseHistoryChart } from './ExerciseHistoryChart';
 
 interface Props {
   exercise: Exercise;
   weekId: string;
   workoutId: string;
+  workoutName: string;
   sessionCount: number;
   readOnly: boolean;
-  onResultSaved: (exerciseId: string, sessionIndex: number, value: string | null) => void;
+  onSessionLogChange: (exerciseId: string, sessionIndex: number, log: SessionLog) => void;
   defaultOpen?: boolean;
+}
+
+function parseLeadingInt(value: string | null): number {
+  if (!value) return 1;
+  const m = value.match(/\d+/);
+  return m ? Math.max(1, parseInt(m[0], 10)) : 1;
 }
 
 export function ExerciseCard({
   exercise,
   weekId,
   workoutId,
+  workoutName,
   sessionCount,
   readOnly,
-  onResultSaved,
+  onSessionLogChange,
   defaultOpen = false,
 }: Props) {
   const [open, setOpen] = useState(defaultOpen);
-  const filled = exercise.results.filter(Boolean).length;
   const hasLogging = sessionCount > 0;
+  // default to the first session that has no logged sets yet
+  const [activeSession, setActiveSession] = useState(() => {
+    const idx = exercise.sessionLogs.findIndex((l) => !sessionHasLog(l));
+    return idx >= 0 ? idx : 0;
+  });
+
+  const totalLogged = exercise.sessionLogs.filter(sessionHasLog).length;
 
   const spec = [
     exercise.sets && `${exercise.sets} Sätze`,
@@ -53,12 +69,12 @@ export function ExerciseCard({
           <span
             className={cn(
               'shrink-0 rounded-full px-2 py-0.5 text-[0.6875rem] font-medium',
-              filled === 0 && 'bg-surface-raised text-fg-subtle',
-              filled > 0 && filled < sessionCount && 'bg-warning/15 text-warning',
-              filled === sessionCount && 'bg-success/15 text-success',
+              totalLogged === 0 && 'bg-surface-raised text-fg-subtle',
+              totalLogged > 0 && totalLogged < sessionCount && 'bg-warning/15 text-warning',
+              totalLogged === sessionCount && 'bg-success/15 text-success',
             )}
           >
-            {filled}/{sessionCount}
+            {totalLogged}/{sessionCount}
           </span>
         )}
         <ChevronDown
@@ -89,26 +105,49 @@ export function ExerciseCard({
           )}
 
           {hasLogging ? (
-            <div className="space-y-3">
-              {Array.from({ length: sessionCount }).map((_, i) => (
-                <SessionResultField
-                  key={i}
-                  weekId={weekId}
-                  workoutId={workoutId}
-                  exerciseId={exercise.id}
-                  sessionIndex={i}
-                  label={`Einheit ${i + 1}`}
-                  initialValue={exercise.results[i] ?? null}
-                  readOnly={readOnly}
-                  onSaved={(v) => onResultSaved(exercise.id, i, v)}
-                />
-              ))}
-            </div>
+            <>
+              {sessionCount > 1 && (
+                <div className="mb-3 flex gap-1.5">
+                  {Array.from({ length: sessionCount }, (_, i) => i).map((i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => setActiveSession(i)}
+                      className={cn(
+                        'flex-1 rounded-control py-1.5 text-xs font-medium transition-colors',
+                        i === activeSession
+                          ? 'bg-accent text-on-accent'
+                          : 'bg-bg-elevated text-fg-muted hover:text-fg',
+                        loggedSetCount(exercise.sessionLogs[i]) > 0 && i !== activeSession && 'text-success',
+                      )}
+                    >
+                      Einheit {i + 1}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              <SetLogger
+                key={activeSession}
+                weekId={weekId}
+                workoutId={workoutId}
+                workoutName={workoutName}
+                exerciseId={exercise.id}
+                exerciseName={exercise.name}
+                sessionIndex={activeSession}
+                sessionLog={exercise.sessionLogs[activeSession]}
+                defaultSetCount={parseLeadingInt(exercise.sets)}
+                readOnly={readOnly}
+                onChange={(log) => onSessionLogChange(exercise.id, activeSession, log)}
+              />
+            </>
           ) : (
             <p className="text-xs text-fg-subtle">
               Für diesen Plan sieht das Sheet keine Eintragsfelder vor – nur ansehen.
             </p>
           )}
+
+          <ExerciseHistoryChart exerciseName={exercise.name} />
         </div>
       )}
     </div>

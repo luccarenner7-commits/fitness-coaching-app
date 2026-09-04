@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { ChevronRight, Dumbbell } from 'lucide-react';
 import type { TrainingPlan, Week } from '@/domain/types';
+import { sessionHasLog } from '@/lib/trainingLog';
 
 export function WorkoutRowLink({
   week,
@@ -18,7 +19,7 @@ export function WorkoutRowLink({
   let filled = 0;
   const slots = exercises * wo.sessionCount;
   for (const row of wo.rows) {
-    if (row.kind === 'exercise') filled += row.exercise.results.filter(Boolean).length;
+    if (row.kind === 'exercise') filled += row.exercise.sessionLogs.filter(sessionHasLog).length;
   }
 
   return (

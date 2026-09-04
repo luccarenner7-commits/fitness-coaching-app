@@ -62,8 +62,12 @@ function handle_(e, p) {
       case 'getTrainingPlan': result = getTrainingPlan_(p.weekId); break;
       case 'getPainDiary':    result = getPainDiary_(p.weekId); break;
       case 'getTodos':        result = getTodos_(p.weekId); break;
-      case 'saveExerciseResult':
-        result = saveExerciseResult_(p); break;
+      case 'saveExerciseSet':
+        result = saveExerciseSet_(p); break;
+      case 'saveExercisePain':
+        result = saveExercisePain_(p); break;
+      case 'getExerciseHistory':
+        result = getExerciseHistory_(p.exerciseName); break;
       case 'savePainDay':
         result = savePainDay_(p); break;
       case 'setTodoDone':
@@ -180,6 +184,7 @@ function getTrainingPlan_(weekId) {
   var ss = SpreadsheetApp.openById(ssFile.getId());
   var workouts = [];
   ss.getSheets().forEach(function (sheet) {
+    if (sheet.getName() === TRAININGLOG_TAB) return;
     try {
       var w = parseWorkoutSheet_(sheet);
       if (w.rows.length > 0) workouts.push(w);
@@ -187,6 +192,7 @@ function getTrainingPlan_(weekId) {
       // one broken tab must not kill the whole plan
     }
   });
+  applyLogToWorkouts_(workouts, readTrainingLogRows_(ss));
   return { weekId: weekId, workouts: workouts };
 }
 
@@ -256,7 +262,8 @@ function parseWorkoutSheet_(sheet) {
           reps: reps || null,
           startWeight: col.startWeight >= 0 ? norm_(row[col.startWeight]) || null : null,
           cue: null,
-          results: col.einheiten.map(function (ci) { return norm_(row[ci]) || null; }),
+          // filled in by applyLogToWorkouts_() from the "Trainingslog" tab
+          sessionLogs: [],
         },
       };
       rows.push(ex);
@@ -283,33 +290,195 @@ function parseWorkoutSheet_(sheet) {
   };
 }
 
-function saveExerciseResult_(p) {
-  requireAll_(p, ['weekId', 'workoutId', 'exerciseId', 'sessionIndex']);
-  var ssFile = fileInWeek_(p.weekId, CONFIG.fileNames.trainingPlan);
-  var ss = SpreadsheetApp.openById(ssFile.getId());
-  var sheet = ss.getSheets().filter(function (s) {
-    return String(s.getSheetId()) === String(p.workoutId);
-  })[0];
-  if (!sheet) throw new Error('Trainingsvariante nicht gefunden');
+// ─── training log ("Trainingslog" tab: Gewicht/Wdh./RIR pro Satz + Schmerz) ──
 
-  var values = readGrid_(sheet, MAX_ROWS, MAX_COLS);
-  var headerRow = -1;
-  for (var r = 0; r < values.length && headerRow < 0; r++) {
-    for (var c = 0; c < values[r].length; c++) {
-      if (norm_(values[r][c]).toLowerCase() === 'sätze') { headerRow = r; break; }
+var TRAININGLOG_TAB = 'Trainingslog';
+var LOG_HEADER = [
+  'Datum', 'Woche', 'Workout', 'Übung', 'Einheit', 'Satz',
+  'Gewicht_kg', 'Wiederholungen', 'RIR', 'Schmerz',
+];
+// Satz = 0 is a reserved marker row that carries only the per-exercise
+// "Schmerzen bei dieser Übung" value (no set data of its own).
+
+function trainingLogSheet_(ss, create) {
+  var sh = ss.getSheetByName(TRAININGLOG_TAB);
+  if (!sh && create) {
+    sh = ss.insertSheet(TRAININGLOG_TAB);
+    sh.getRange(1, 1, 1, LOG_HEADER.length).setValues([LOG_HEADER]);
+  }
+  return sh;
+}
+
+function readTrainingLogRows_(ss) {
+  var sh = trainingLogSheet_(ss, false);
+  if (!sh) return [];
+  var values = readGrid_(sh, 4000, LOG_HEADER.length);
+  var rows = [];
+  for (var r = 1; r < values.length; r++) {
+    var row = values[r];
+    if (!norm_(row[2]) && !norm_(row[3])) continue;
+    rows.push({
+      date: norm_(row[0]),
+      weekLabel: norm_(row[1]),
+      workout: norm_(row[2]),
+      exercise: norm_(row[3]),
+      session: Number(row[4]) || 0,
+      setNumber: Number(row[5]) || 0,
+      weight: norm_(row[6]),
+      reps: norm_(row[7]),
+      rir: norm_(row[8]),
+      pain: norm_(row[9]),
+      _sheetRow: r + 1,
+    });
+  }
+  return rows;
+}
+
+function findLogRow_(rows, workout, exercise, session, setNumber) {
+  for (var i = 0; i < rows.length; i++) {
+    var r = rows[i];
+    if (r.workout === workout && r.exercise === exercise && r.session === session && r.setNumber === setNumber) {
+      return r;
     }
   }
-  if (headerRow < 0) throw new Error('Kopfzeile im Sheet nicht gefunden');
-  var einheiten = [];
-  for (var i = 0; i < values[headerRow].length; i++) {
-    if (/^einheit\s*\d+/i.test(norm_(values[headerRow][i]))) einheiten.push(i);
-  }
-  var si = Number(p.sessionIndex);
-  if (si < 0 || si >= einheiten.length) throw new Error('Diese Einheit gibt es im Sheet nicht');
+  return null;
+}
 
-  var rowNumber = Number(p.exerciseId); // 1-based sheet row
-  sheet.getRange(rowNumber, einheiten[si] + 1).setValue(p.value == null ? '' : String(p.value));
+function upsertLogRow_(sh, existing, values) {
+  if (existing) {
+    sh.getRange(existing._sheetRow, 1, 1, values.length).setValues([values]);
+  } else {
+    sh.appendRow(values);
+  }
+}
+
+/** Merge logged sets/pain from the Trainingslog tab into parsed workouts (by workout+exercise name). */
+function applyLogToWorkouts_(workouts, logRows) {
+  var byKey = {};
+  logRows.forEach(function (row) {
+    var key = row.workout + ' ' + row.exercise;
+    byKey[key] = byKey[key] || {};
+    var bucket = byKey[key][row.session] = byKey[key][row.session] || { sets: [], painAfter: null };
+    if (row.setNumber === 0) {
+      if (row.pain !== '') bucket.painAfter = Number(row.pain);
+    } else if (row.weight !== '' || row.reps !== '' || row.rir !== '') {
+      bucket.sets.push({
+        setNumber: row.setNumber,
+        weight: row.weight === '' ? null : Number(row.weight),
+        reps: row.reps === '' ? null : Number(row.reps),
+        rir: row.rir === '' ? null : Number(row.rir),
+      });
+    }
+  });
+
+  workouts.forEach(function (w) {
+    w.rows.forEach(function (r) {
+      if (r.kind !== 'exercise') return;
+      var key = w.name + ' ' + r.exercise.name;
+      var sessions = byKey[key] || {};
+      var logs = [];
+      for (var i = 1; i <= w.sessionCount; i++) {
+        var bucket = sessions[i] || { sets: [], painAfter: null };
+        bucket.sets.sort(function (a, b) { return a.setNumber - b.setNumber; });
+        logs.push(bucket);
+      }
+      r.exercise.sessionLogs = logs;
+    });
+  });
+}
+
+function saveExerciseSet_(p) {
+  requireAll_(p, ['weekId', 'workoutName', 'exerciseName', 'sessionIndex', 'setNumber']);
+  var week = weekById_(p.weekId);
+  var ssFile = fileInWeek_(p.weekId, CONFIG.fileNames.trainingPlan);
+  var ss = SpreadsheetApp.openById(ssFile.getId());
+  var sh = trainingLogSheet_(ss, true);
+  var session = Number(p.sessionIndex) + 1;
+  var setNumber = Number(p.setNumber);
+
+  var rows = readTrainingLogRows_(ss);
+  var existing = findLogRow_(rows, p.workoutName, p.exerciseName, session, setNumber);
+  var num = function (v) { return v === null || v === undefined || v === '' ? '' : Number(v); };
+
+  upsertLogRow_(sh, existing, [
+    iso_(new Date()), week.label, p.workoutName, p.exerciseName, session, setNumber,
+    num(p.weight), num(p.reps), num(p.rir),
+    existing ? existing.pain : '', // never clobber a pain value saved separately
+  ]);
   return { saved: true };
+}
+
+function saveExercisePain_(p) {
+  requireAll_(p, ['weekId', 'workoutName', 'exerciseName', 'sessionIndex']);
+  var week = weekById_(p.weekId);
+  var ssFile = fileInWeek_(p.weekId, CONFIG.fileNames.trainingPlan);
+  var ss = SpreadsheetApp.openById(ssFile.getId());
+  var sh = trainingLogSheet_(ss, true);
+  var session = Number(p.sessionIndex) + 1;
+
+  var rows = readTrainingLogRows_(ss);
+  var existing = findLogRow_(rows, p.workoutName, p.exerciseName, session, 0);
+  var pain = p.pain === null || p.pain === undefined || p.pain === '' ? '' : Number(p.pain);
+
+  upsertLogRow_(sh, existing, [
+    iso_(new Date()), week.label, p.workoutName, p.exerciseName, session, 0,
+    '', '', '', pain,
+  ]);
+  return { saved: true };
+}
+
+/** Weight-over-time for one exercise, scanning recent weeks (newest first, capped). */
+function getExerciseHistory_(exerciseName) {
+  if (!exerciseName) throw new Error('exerciseName fehlt');
+  var weeks = listWeeks_();
+  var MAX_WEEKS_SCANNED = 10;
+  var points = [];
+
+  for (var i = 0; i < weeks.length && i < MAX_WEEKS_SCANNED; i++) {
+    var week = weeks[i];
+    var ss;
+    try {
+      var file = fileInWeek_(week.id, CONFIG.fileNames.trainingPlan);
+      ss = SpreadsheetApp.openById(file.getId());
+    } catch (err) {
+      continue; // e.g. week has no Trainingsplan file
+    }
+
+    var bySession = {};
+    readTrainingLogRows_(ss).forEach(function (row) {
+      if (row.exercise !== exerciseName) return;
+      var bucket = bySession[row.session] = bySession[row.session] || {
+        sets: [], painAfter: null, date: row.date,
+      };
+      if (row.date) bucket.date = row.date;
+      if (row.setNumber === 0) {
+        if (row.pain !== '') bucket.painAfter = Number(row.pain);
+      } else if (row.weight !== '' || row.reps !== '' || row.rir !== '') {
+        bucket.sets.push({
+          setNumber: row.setNumber,
+          weight: row.weight === '' ? null : Number(row.weight),
+          reps: row.reps === '' ? null : Number(row.reps),
+          rir: row.rir === '' ? null : Number(row.rir),
+        });
+      }
+    });
+
+    Object.keys(bySession).forEach(function (sessionKey) {
+      var bucket = bySession[sessionKey];
+      if (bucket.sets.length === 0 && bucket.painAfter == null) return;
+      bucket.sets.sort(function (a, b) { return a.setNumber - b.setNumber; });
+      points.push({
+        date: bucket.date || week.startDate,
+        weekLabel: week.label,
+        sessionIndex: Number(sessionKey),
+        sets: bucket.sets,
+        painAfter: bucket.painAfter,
+      });
+    });
+  }
+
+  points.sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; });
+  return points;
 }
 
 // ─── pain diary ──────────────────────────────────────────────────────────────

@@ -1,5 +1,6 @@
 import type {
   Customer,
+  ExerciseHistoryPoint,
   PainDiary,
   TodoList,
   TrainingPlan,
@@ -19,8 +20,12 @@ export interface CoachingRepository {
   getCurrentWeek(): Promise<Week>;
 
   getTrainingPlan(weekId: string): Promise<TrainingPlan>;
-  /** Write one exercise's result for one session ("Einheit N") back to the sheet. */
-  saveExerciseResult(input: SaveExerciseResultInput): Promise<void>;
+  /** Log (or update) one performed set, written to the "Trainingslog" tab. */
+  saveExerciseSet(input: SaveExerciseSetInput): Promise<void>;
+  /** Log the "Schmerzen bei dieser Übung" value for one exercise/session. */
+  saveExercisePain(input: SaveExercisePainInput): Promise<void>;
+  /** Weight-over-time history for one exercise, across past weeks (newest last). */
+  getExerciseHistory(exerciseName: string): Promise<ExerciseHistoryPoint[]>;
 
   getPainDiary(weekId: string): Promise<PainDiary>;
   /** Write one day's value + note back to the Schmerztagebuch sheet. */
@@ -31,13 +36,29 @@ export interface CoachingRepository {
   setTodoDone(input: SetTodoDoneInput): Promise<void>;
 }
 
-export interface SaveExerciseResultInput {
+export interface SaveExerciseSetInput {
   weekId: string;
   workoutId: string;
+  workoutName: string;
   exerciseId: string;
-  /** 0-based index of the "Einheit N" column. */
+  exerciseName: string;
+  /** 0-based index of the "Einheit N" this set belongs to. */
   sessionIndex: number;
-  value: string;
+  /** 1-based set number within that session. */
+  setNumber: number;
+  weight: number | null;
+  reps: number | null;
+  rir: number | null;
+}
+
+export interface SaveExercisePainInput {
+  weekId: string;
+  workoutId: string;
+  workoutName: string;
+  exerciseId: string;
+  exerciseName: string;
+  sessionIndex: number;
+  pain: number | null;
 }
 
 export interface SavePainDayInput {

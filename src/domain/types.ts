@@ -1,12 +1,14 @@
 /**
- * Domain model — deliberately independent of Google Sheets, but it only carries
- * fields that actually exist in the coach's sheets today. Anything richer
- * (RIR, structured pain attributes, todo priority/date, …) is parked in
- * DEVIATIONS.md, not modelled here.
+ * Domain model. Mostly independent of Google Sheets, but for the plan itself
+ * (exercise names, prescribed sets/reps, coaching cues, …) it only carries
+ * fields that actually exist in the coach's Trainingsplan sheet — those stay
+ * free-text strings, exactly as they live in the sheet ("2", "6-10",
+ * "5-7 pro Seite", "Widerstandsband"). The app does not parse or normalise them.
  *
- * All measured values are kept as free-text strings, because that is exactly how
- * they live in the sheets ("2", "6-10", "5-7 pro Seite", "80x8, 80x8, 80x7",
- * "Widerstandsband", "4 UR"). The app does not parse or normalise them in V1.
+ * Actual training *performance* (weight/reps/RIR per set, pain per exercise) is
+ * structured and written to a dedicated "Trainingslog" tab the app manages
+ * itself — see docs/SHEETS-ANALYSIS.md. Structured todo/pain fields beyond what
+ * the coach's sheets have are still parked in DEVIATIONS.md.
  */
 
 export interface Customer {
@@ -65,10 +67,38 @@ export interface Exercise {
   /** Coaching note row printed directly under the exercise. */
   cue: string | null;
   /**
-   * What the client entered per session — one entry per "Einheit N" column.
-   * Length always equals Workout.sessionCount. `null` = not filled yet.
+   * Logged performance per session ("Einheit N"). Length always equals
+   * Workout.sessionCount.
    */
-  results: (string | null)[];
+  sessionLogs: SessionLog[];
+}
+
+/** One set actually performed. */
+export interface SetLog {
+  setNumber: number;
+  /** kg */
+  weight: number | null;
+  reps: number | null;
+  /** Reps in Reserve. */
+  rir: number | null;
+}
+
+/** What the client logged for one exercise, in one session ("Einheit N"). */
+export interface SessionLog {
+  sets: SetLog[];
+  /** "Schmerzen bei dieser Übung", 0–10 — asked once, after the exercise. */
+  painAfter: number | null;
+}
+
+/** One historical data point for an exercise's weight-over-time chart. */
+export interface ExerciseHistoryPoint {
+  /** ISO date the entry was logged. */
+  date: string;
+  weekLabel: string;
+  /** 1-based "Einheit" number. */
+  sessionIndex: number;
+  sets: SetLog[];
+  painAfter: number | null;
 }
 
 // ─── Pain diary ──────────────────────────────────────────────────────────────

@@ -60,6 +60,16 @@ Woche ist die, deren Bereich `heute` enthält.
 - Vorlage hat zusätzlich Block **"Belastungssteuerung"**: Zeilen Einheit 1/2/3
   × Spalten `Schmerzen während Training (0–10)`, `Intensität Training (1–10)`.
 
+### Trainingslog (neuer, App-verwalteter Tab)
+
+Seit 04.09. legt die App bei Bedarf selbst einen zusätzlichen Tab
+**`Trainingslog`** in der jeweiligen Wochen-Trainingsplan-Datei an (bestehende
+Tabs bleiben unangetastet). Dort landen Gewicht/Wdh./RIR pro Satz sowie
+„Schmerzen bei dieser Übung" — Felder, die das Original-Sheet nicht kennt.
+Spalten: `Datum | Woche | Workout | Übung | Einheit | Satz | Gewicht_kg |
+Wiederholungen | RIR | Schmerz`. `Satz = 0` ist eine reine Markierungszeile für
+den Schmerzwert der Übung/Einheit, ohne eigene Satzdaten.
+
 ## Schmerztagebuch (Google Sheet)
 
 - **Aktuelle Vorlage:** eine Tabelle `Tag | Abends (0–10) | Was habe ich heute gemacht?`,

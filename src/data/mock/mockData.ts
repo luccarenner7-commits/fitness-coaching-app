@@ -1,6 +1,8 @@
 import type {
   Customer,
+  ExerciseHistoryPoint,
   PainDiary,
+  SessionLog,
   TodoList,
   TrainingPlan,
   Week,
@@ -34,13 +36,17 @@ export const MOCK_WEEKS: Week[] = [
 
 let exSeq = 0;
 
+function emptyLog(): SessionLog {
+  return { sets: [], painAfter: null };
+}
+
 interface ExDef {
   name: string;
   sets: string | null;
   reps: string | null;
   startWeight?: string | null;
   cue?: string | null;
-  results?: (string | null)[];
+  logs?: SessionLog[];
 }
 
 function rows(defs: Array<string | ExDef>, sessionCount: number): WorkoutRow[] {
@@ -50,7 +56,7 @@ function rows(defs: Array<string | ExDef>, sessionCount: number): WorkoutRow[] {
       return { kind: 'section', id: `sec-${exSeq++}`, title: d };
     }
     position += 1;
-    const results = d.results ?? Array(sessionCount).fill(null);
+    const logs = d.logs ?? Array.from({ length: sessionCount }, emptyLog);
     return {
       kind: 'exercise',
       exercise: {
@@ -61,16 +67,21 @@ function rows(defs: Array<string | ExDef>, sessionCount: number): WorkoutRow[] {
         reps: d.reps,
         startWeight: d.startWeight ?? null,
         cue: d.cue ?? null,
-        results: results.slice(0, sessionCount),
+        sessionLogs: logs.slice(0, sessionCount),
       },
     };
   });
 }
 
-function strengthWorkout(results: {
-  [exerciseName: string]: (string | null)[];
-}): Workout {
-  const r = (name: string) => results[name] ?? [null, null, null];
+function log(sets: Array<[number | null, number | null, number | null]>, pain: number | null = null): SessionLog {
+  return {
+    sets: sets.map(([weight, reps, rir], i) => ({ setNumber: i + 1, weight, reps, rir })),
+    painAfter: pain,
+  };
+}
+
+function strengthWorkout(results: { [exerciseName: string]: SessionLog[] }): Workout {
+  const r = (name: string) => results[name] ?? [emptyLog(), emptyLog(), emptyLog()];
   return {
     id: 'phase2',
     name: 'Trainingsplan Phase 2: Strenght',
@@ -85,7 +96,7 @@ function strengthWorkout(results: {
           reps: '6-10',
           startWeight: 'Widerstandsband',
           cue: 'Fokus auf Kontrolle, nicht zu schnell',
-          results: r('Beckenkippen im Halbkniestand'),
+          logs: r('Beckenkippen im Halbkniestand'),
         },
         {
           name: 'Hüftbeugung mit Faszienrolle (Teilumfang)',
@@ -93,7 +104,7 @@ function strengthWorkout(results: {
           reps: '5-7 pro Seite',
           startWeight: '12 Kg',
           cue: 'Bewegung kommt NUR aus der Hüfte, Po aktiv nach hinten schieben',
-          results: r('Hüftbeugung mit Faszienrolle (Teilumfang)'),
+          logs: r('Hüftbeugung mit Faszienrolle (Teilumfang)'),
         },
         'Kraftteil',
         {
@@ -102,7 +113,7 @@ function strengthWorkout(results: {
           reps: '6-10',
           startWeight: '5 Kg pro Seite',
           cue: 'Unterer Rücken bleibt gerade, Bewegung kommt aus Hüfte',
-          results: r('Rückenstrecker am Gerät'),
+          logs: r('Rückenstrecker am Gerät'),
         },
         {
           name: 'Push/ Pull Gegengleich sitzend mit Kurzhantel am Kabelzug',
@@ -110,7 +121,7 @@ function strengthWorkout(results: {
           reps: '6-10',
           startWeight: '5 Kg Push/ 10 Kg Pull',
           cue: 'Bewegung Gegengleich ausführen, aufrechter Sitz, Rumpfspannung!',
-          results: r('Push/ Pull Gegengleich sitzend mit Kurzhantel am Kabelzug'),
+          logs: r('Push/ Pull Gegengleich sitzend mit Kurzhantel am Kabelzug'),
         },
         {
           name: 'Zercher Squats (Kniebeugen) mit Fersen erhöht',
@@ -118,7 +129,7 @@ function strengthWorkout(results: {
           reps: '4-6',
           startWeight: 'Stange',
           cue: 'Langhantel in Ellbogenbeuge, Rumpfspannung und Kontrolle!',
-          results: r('Zercher Squats (Kniebeugen) mit Fersen erhöht'),
+          logs: r('Zercher Squats (Kniebeugen) mit Fersen erhöht'),
         },
         {
           name: 'Breites Rudern (Kabelzug oder Maschine, T Bar Row)',
@@ -126,7 +137,7 @@ function strengthWorkout(results: {
           reps: '6-10',
           startWeight: '15 Kg',
           cue: 'Auf Schulterblattbewegung achten, Ellbogen abspreizen',
-          results: r('Breites Rudern (Kabelzug oder Maschine, T Bar Row)'),
+          logs: r('Breites Rudern (Kabelzug oder Maschine, T Bar Row)'),
         },
         {
           name: 'Kabelzug Crunches',
@@ -134,7 +145,7 @@ function strengthWorkout(results: {
           reps: '6-10',
           startWeight: '20 Kg',
           cue: 'Maximale Beugung in LWS, "einrollen" und Spannung spüren',
-          results: r('Kabelzug Crunches'),
+          logs: r('Kabelzug Crunches'),
         },
       ],
       3,
@@ -253,13 +264,11 @@ export function buildTrainingPlans(): Record<string, TrainingPlan> {
       weekId: 'w3',
       workouts: [
         strengthWorkout({
-          'Beckenkippen im Halbkniestand': ['Widerstandsband, 2x10', null, null],
-          'Hüftbeugung mit Faszienrolle (Teilumfang)': ['12 kg, 2x7/Seite', null, null],
-          'Rückenstrecker am Gerät': ['5 kg/Seite, 2x10', null, null],
-          'Push/ Pull Gegengleich sitzend mit Kurzhantel am Kabelzug': ['5/10 kg, 2x9', null, null],
-          'Zercher Squats (Kniebeugen) mit Fersen erhöht': ['Stange 20 kg, 2x6', null, null],
-          'Breites Rudern (Kabelzug oder Maschine, T Bar Row)': ['15 kg, 2x10', null, null],
-          'Kabelzug Crunches': ['20 kg, 2x8', null, null],
+          'Beckenkippen im Halbkniestand': [
+            log([[null, 10, 2], [null, 10, 2]], 1),
+            emptyLog(),
+            emptyLog(),
+          ],
         }),
         urlaubWorkout,
         homeWorkout,
@@ -269,17 +278,26 @@ export function buildTrainingPlans(): Record<string, TrainingPlan> {
       weekId: 'w2',
       workouts: [
         strengthWorkout({
-          'Beckenkippen im Halbkniestand': ['Band, 2x10', 'Band, 2x10', 'Band, 2x12'],
-          'Hüftbeugung mit Faszienrolle (Teilumfang)': ['12 kg, 2x7', '12 kg, 2x7', '12 kg, 2x8'],
-          'Rückenstrecker am Gerät': ['5 kg, 2x10', '5 kg, 2x10', '7,5 kg, 2x8'],
-          'Push/ Pull Gegengleich sitzend mit Kurzhantel am Kabelzug': [
-            '5/10, 2x8',
-            '5/10, 2x9',
-            '5/10, 2x10',
+          'Beckenkippen im Halbkniestand': [
+            log([[null, 10, 2], [null, 10, 2]], 1),
+            log([[null, 10, 1], [null, 10, 2]], 2),
+            log([[null, 12, 2], [null, 12, 2]], 1),
           ],
-          'Zercher Squats (Kniebeugen) mit Fersen erhöht': ['Stange, 2x6', 'Stange, 2x6', '25 kg, 2x5'],
-          'Breites Rudern (Kabelzug oder Maschine, T Bar Row)': ['15 kg, 2x9', '15 kg, 2x10', '17,5 kg, 2x8'],
-          'Kabelzug Crunches': ['20 kg, 2x8', '20 kg, 2x9', '22,5 kg, 2x8'],
+          'Hüftbeugung mit Faszienrolle (Teilumfang)': [
+            log([[12, 7, 2], [12, 7, 2]], 2),
+            log([[12, 7, 2], [12, 7, 2]], 1),
+            log([[12, 8, 1], [12, 8, 2]], 1),
+          ],
+          'Rückenstrecker am Gerät': [
+            log([[5, 10, 2], [5, 10, 2]], 1),
+            log([[5, 10, 2], [5, 10, 2]], 1),
+            log([[7.5, 8, 1], [7.5, 8, 2]], 2),
+          ],
+          'Zercher Squats (Kniebeugen) mit Fersen erhöht': [
+            log([[20, 6, 2], [20, 6, 2]], 1),
+            log([[20, 6, 2], [20, 6, 2]], 1),
+            log([[25, 5, 1], [25, 5, 2]], 2),
+          ],
         }),
       ],
     },
@@ -287,17 +305,57 @@ export function buildTrainingPlans(): Record<string, TrainingPlan> {
       weekId: 'w1',
       workouts: [
         strengthWorkout({
-          'Beckenkippen im Halbkniestand': ['Band, 2x8', 'Band, 2x10', 'Band, 2x10'],
-          'Hüftbeugung mit Faszienrolle (Teilumfang)': ['10 kg, 2x6', '12 kg, 2x6', '12 kg, 2x7'],
-          'Rückenstrecker am Gerät': ['2,5 kg, 2x10', '5 kg, 2x8', '5 kg, 2x10'],
-          'Push/ Pull Gegengleich sitzend mit Kurzhantel am Kabelzug': ['5/7,5, 2x8', '5/10, 2x8', '5/10, 2x8'],
-          'Zercher Squats (Kniebeugen) mit Fersen erhöht': ['Stange, 2x5', 'Stange, 2x6', 'Stange, 2x6'],
-          'Breites Rudern (Kabelzug oder Maschine, T Bar Row)': ['12,5 kg, 2x10', '15 kg, 2x8', '15 kg, 2x9'],
-          'Kabelzug Crunches': ['15 kg, 2x10', '20 kg, 2x8', '20 kg, 2x8'],
+          'Beckenkippen im Halbkniestand': [
+            log([[null, 8, 2], [null, 8, 3]], 2),
+            log([[null, 10, 2], [null, 10, 2]], 2),
+            log([[null, 10, 1], [null, 10, 2]], 1),
+          ],
+          'Hüftbeugung mit Faszienrolle (Teilumfang)': [
+            log([[10, 6, 2], [10, 6, 3]], 2),
+            log([[12, 6, 2], [12, 6, 2]], 2),
+            log([[12, 7, 1], [12, 7, 2]], 1),
+          ],
+          'Rückenstrecker am Gerät': [
+            log([[2.5, 10, 3], [2.5, 10, 3]], 2),
+            log([[5, 8, 2], [5, 8, 2]], 2),
+            log([[5, 10, 1], [5, 10, 2]], 1),
+          ],
+          'Zercher Squats (Kniebeugen) mit Fersen erhöht': [
+            log([[20, 5, 2], [20, 5, 3]], 2),
+            log([[20, 6, 2], [20, 6, 2]], 2),
+            log([[20, 6, 1], [20, 6, 2]], 1),
+          ],
         }),
       ],
     },
   };
+}
+
+// ─── exercise history (weight-over-time chart) ────────────────────────────────
+
+export function buildExerciseHistory(exerciseName: string): ExerciseHistoryPoint[] {
+  const plans = buildTrainingPlans();
+  const points: ExerciseHistoryPoint[] = [];
+  const weeksByOldest = [...MOCK_WEEKS].reverse();
+  for (const week of weeksByOldest) {
+    const plan = plans[week.id];
+    for (const workout of plan.workouts) {
+      for (const row of workout.rows) {
+        if (row.kind !== 'exercise' || row.exercise.name !== exerciseName) continue;
+        row.exercise.sessionLogs.forEach((sessionLog, i) => {
+          if (sessionLog.sets.length === 0) return;
+          points.push({
+            date: dateForWeekday(week.startDate, WEEKDAYS[Math.min(i * 2, 6)]),
+            weekLabel: week.label,
+            sessionIndex: i + 1,
+            sets: sessionLog.sets,
+            painAfter: sessionLog.painAfter,
+          });
+        });
+      }
+    }
+  }
+  return points;
 }
 
 // ─── pain diary ──────────────────────────────────────────────────────────────

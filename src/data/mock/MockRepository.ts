@@ -1,13 +1,15 @@
 import type {
   CoachingRepository,
-  SaveExerciseResultInput,
+  SaveExercisePainInput,
+  SaveExerciseSetInput,
   SavePainDayInput,
   SetTodoDoneInput,
 } from '@/data/repository';
-import type { PainDiary, TodoList, TrainingPlan } from '@/domain/types';
+import type { ExerciseHistoryPoint, PainDiary, TodoList, TrainingPlan } from '@/domain/types';
 import {
   MOCK_CUSTOMER,
   MOCK_WEEKS,
+  buildExerciseHistory,
   buildPainDiaries,
   buildTodoLists,
   buildTrainingPlans,
@@ -25,6 +27,7 @@ export class MockRepository implements CoachingRepository {
   private plans: Record<string, TrainingPlan> = buildTrainingPlans();
   private pain: Record<string, PainDiary> = buildPainDiaries();
   private todos: Record<string, TodoList> = buildTodoLists();
+  private historyOverrides: Record<string, ExerciseHistoryPoint[]> = {};
 
   async getCustomer() {
     await delay(160);
@@ -49,15 +52,39 @@ export class MockRepository implements CoachingRepository {
     return clone(plan);
   }
 
-  async saveExerciseResult(input: SaveExerciseResultInput) {
-    await delay(420);
-    const plan = this.plans[input.weekId];
-    const workout = plan?.workouts.find((w) => w.id === input.workoutId);
+  private findExercise(weekId: string, workoutId: string, exerciseId: string) {
+    const plan = this.plans[weekId];
+    const workout = plan?.workouts.find((w) => w.id === workoutId);
     const row = workout?.rows.find(
-      (r) => r.kind === 'exercise' && r.exercise.id === input.exerciseId,
+      (r) => r.kind === 'exercise' && r.exercise.id === exerciseId,
     );
     if (!row || row.kind !== 'exercise') throw new Error('Übung nicht gefunden');
-    row.exercise.results[input.sessionIndex] = input.value.trim() || null;
+    return row.exercise;
+  }
+
+  async saveExerciseSet(input: SaveExerciseSetInput) {
+    await delay(380);
+    const exercise = this.findExercise(input.weekId, input.workoutId, input.exerciseId);
+    const sessionLog = exercise.sessionLogs[input.sessionIndex];
+    if (!sessionLog) throw new Error('Einheit nicht gefunden');
+    const idx = sessionLog.sets.findIndex((s) => s.setNumber === input.setNumber);
+    const entry = { setNumber: input.setNumber, weight: input.weight, reps: input.reps, rir: input.rir };
+    if (idx >= 0) sessionLog.sets[idx] = entry;
+    else sessionLog.sets.push(entry);
+    sessionLog.sets.sort((a, b) => a.setNumber - b.setNumber);
+  }
+
+  async saveExercisePain(input: SaveExercisePainInput) {
+    await delay(300);
+    const exercise = this.findExercise(input.weekId, input.workoutId, input.exerciseId);
+    const sessionLog = exercise.sessionLogs[input.sessionIndex];
+    if (!sessionLog) throw new Error('Einheit nicht gefunden');
+    sessionLog.painAfter = input.pain;
+  }
+
+  async getExerciseHistory(exerciseName: string) {
+    await delay(280);
+    return clone(this.historyOverrides[exerciseName] ?? buildExerciseHistory(exerciseName));
   }
 
   async getPainDiary(weekId: string) {

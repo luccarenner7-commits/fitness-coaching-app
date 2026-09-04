@@ -11,15 +11,24 @@ Stand: 2026-09-04
 
 ## 1. Training / Übungen
 
-- [ ] **RIR (Reps in Reserve) pro Satz** – im Konzept gefordert, in den Sheets
-      nicht vorhanden. Sheets kennen nur: `Sätze` (Anzahl), `Wiederholungen`
-      (Bereich, z. B. "6–10"), `Startgewicht`, und pro Einheit **eine Freitext-Zelle**
-      (`Einheit 1/2/3`). → V1 erfasst pro Übung/Einheit genau das, was das Sheet vorsieht.
-- [ ] **Satz-für-Satz-Erfassung** (Gewicht + Wdh. je einzelnem Satz als
-      strukturierte Felder). Sheet hat nur eine kombinierte Freitext-Zelle pro
-      Einheit. → V1: ein Eingabefeld pro Übung pro Einheit, Format wie im Sheet.
-- [ ] **Strukturierte Trainingshistorie mit Graphen** (Gewicht/Volumen/RIR-Verlauf).
-      → V1: chronologische Anzeige der Wochenordner, wie sie im Sheet stehen.
+- [x] **RIR (Reps in Reserve) pro Satz** – seit 04.09. umgesetzt. Nicht im
+      Original-Sheet vorhanden, deshalb **eigener Tab `Trainingslog`**, den die
+      App automatisch im jeweiligen Wochen-Trainingsplan anlegt (bestehende
+      Tabs des Coaches bleiben unverändert). Spalten: Datum, Woche, Workout,
+      Übung, Einheit, Satz, Gewicht_kg, Wiederholungen, RIR, Schmerz.
+- [x] **Satz-für-Satz-Erfassung** (Gewicht/Wdh./RIR je einzelnem Satz,
+      strukturiert) – umgesetzt, schreibt in den `Trainingslog`-Tab statt in
+      die alte Freitext-Zelle „Einheit N" der Übung.
+- [x] **Schmerzen pro Übung** ("Schmerzen bei dieser Übung", 0–10, nach jeder
+      Übung abgefragt) – umgesetzt, eigene Markierungszeile (Satz = 0) im
+      `Trainingslog`-Tab. Getrennt vom täglichen Schmerztagebuch (Abschnitt 2).
+- [x] **Gewichtsverlauf pro Übung als Grafik** – umgesetzt, aber bewusst
+      versteckt (Klick auf „Verlauf anzeigen" pro Übung). Liest wochenübergreifend
+      aus dem `Trainingslog`-Tab der letzten bis zu 10 Wochen; ältere Wochen
+      werden aus Performance-Gründen nicht gescannt.
+      Rückwärtskompatibilität: Historie matcht Übungen über den Namen
+      (Workout+Übung-Text), nicht über eine ID — benennt der Coach eine Übung
+      um, reißt ihre Historie ab.
 - [ ] **"Belastungssteuerung"-Block** (`Schmerzen während Training 0–10`,
       `Intensität Training 1–10` pro Einheit) ist in der aktuellen Vorlage
       vorhanden, aber in Michaels realen Tabs nicht immer. → V1 liest ihn, wenn
@@ -38,8 +47,10 @@ Stand: 2026-09-04
 - [ ] **Trainings-Kommentarfeld** ("Zusätzliche Kommentare können optional
       vorgesehen werden"). Kein Sheet-Feld dafür → Backlog.
 - [ ] **View-only-Pläne:** Tabs ohne "Einheit"-Spalten (z. B. "Urlaub",
-      "Homeworkout") können in der App nur angesehen werden – es gibt keine
-      Zelle zum Reinschreiben.
+      "Homeworkout") können in der App weiterhin nur angesehen werden. Das ist
+      inzwischen eine reine Komfort-Gate-Entscheidung (die Erfassung schreibt
+      seit dem `Trainingslog`-Tab ohnehin nicht mehr in die Plan-Spalten) —
+      könnte man aufheben, wurde aber nicht explizit verlangt.
 
 ## 2. Schmerztagebuch
 

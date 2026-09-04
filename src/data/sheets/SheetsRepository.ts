@@ -1,10 +1,18 @@
 import type {
   CoachingRepository,
-  SaveExerciseResultInput,
+  SaveExercisePainInput,
+  SaveExerciseSetInput,
   SavePainDayInput,
   SetTodoDoneInput,
 } from '@/data/repository';
-import type { Customer, PainDiary, TodoList, TrainingPlan, Week } from '@/domain/types';
+import type {
+  Customer,
+  ExerciseHistoryPoint,
+  PainDiary,
+  TodoList,
+  TrainingPlan,
+  Week,
+} from '@/domain/types';
 import { AppsScriptClient } from './client';
 
 /**
@@ -35,11 +43,20 @@ export class SheetsRepository implements CoachingRepository {
     return this.api.get<TrainingPlan>('getTrainingPlan', { weekId });
   }
 
-  async saveExerciseResult(input: SaveExerciseResultInput): Promise<void> {
-    await this.api.post('saveExerciseResult', {
+  async saveExerciseSet(input: SaveExerciseSetInput): Promise<void> {
+    await this.api.post('saveExerciseSet', {
       ...input,
       sessionIndex: String(input.sessionIndex),
+      setNumber: String(input.setNumber),
     });
+  }
+
+  async saveExercisePain(input: SaveExercisePainInput): Promise<void> {
+    await this.api.post('saveExercisePain', { ...input, sessionIndex: String(input.sessionIndex) });
+  }
+
+  getExerciseHistory(exerciseName: string): Promise<ExerciseHistoryPoint[]> {
+    return this.api.get<ExerciseHistoryPoint[]>('getExerciseHistory', { exerciseName });
   }
 
   getPainDiary(weekId: string): Promise<PainDiary> {

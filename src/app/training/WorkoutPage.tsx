@@ -1,8 +1,10 @@
 import { useMemo } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
+import type { SessionLog } from '@/domain/types';
 import { useRepository } from '@/data';
 import { useAsync } from '@/lib/useAsync';
+import { sessionHasLog } from '@/lib/trainingLog';
 import { ErrorBlock, LoadingBlock } from '@/components/ui/StatusViews';
 import { SectionLabel } from '@/components/ui/Card';
 import { ExerciseCard } from '@/features/training/ExerciseCard';
@@ -25,18 +27,18 @@ export function WorkoutPage() {
     const exercises = workout.rows.filter((r) => r.kind === 'exercise');
     return Array.from({ length: workout.sessionCount }, (_, i) => ({
       session: i + 1,
-      filled: exercises.filter((r) => r.kind === 'exercise' && r.exercise.results[i]).length,
+      filled: exercises.filter((r) => r.kind === 'exercise' && sessionHasLog(r.exercise.sessionLogs[i])).length,
       total: exercises.length,
     }));
   }, [workout]);
 
-  function handleResultSaved(exerciseId: string, sessionIndex: number, value: string | null) {
+  function handleSessionLogChange(exerciseId: string, sessionIndex: number, log: SessionLog) {
     plan.setData((prev) => {
       if (!prev) return prev;
       const next = structuredClone(prev);
       const wo = next.workouts.find((w) => w.id === workoutId);
       const row = wo?.rows.find((r) => r.kind === 'exercise' && r.exercise.id === exerciseId);
-      if (row && row.kind === 'exercise') row.exercise.results[sessionIndex] = value;
+      if (row && row.kind === 'exercise') row.exercise.sessionLogs[sessionIndex] = log;
       return next;
     });
   }
@@ -117,9 +119,10 @@ export function WorkoutPage() {
                   exercise={row.exercise}
                   weekId={weekId}
                   workoutId={workout.id}
+                  workoutName={workout.name}
                   sessionCount={workout.sessionCount}
                   readOnly={readOnly}
-                  onResultSaved={handleResultSaved}
+                  onSessionLogChange={handleSessionLogChange}
                 />
               ),
             )}
