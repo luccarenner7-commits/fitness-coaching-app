@@ -2,6 +2,7 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { Card, SectionLabel } from '@/components/ui/Card';
 import { APP_VERSION, TEST_CUSTOMER } from '@/lib/config';
 import { dataSource } from '@/data';
+import { Changelog } from '@/features/settings/Changelog';
 
 export function SettingsPage() {
   return (
@@ -37,6 +38,9 @@ export function SettingsPage() {
           </div>
         </dl>
       </Card>
+
+      <SectionLabel>Änderungen</SectionLabel>
+      <Changelog />
 
       <p className="mt-6 px-1 text-xs text-fg-subtle">
         In dieser Vorabversion gibt es noch keinen Login. Alle Daten gehören zum
