@@ -37,6 +37,10 @@ jobs:
           VITE_APPS_SCRIPT_TOKEN: ${{ vars.VITE_APPS_SCRIPT_TOKEN }}
 
       - uses: actions/configure-pages@v5
+        with:
+          # Switch Pages to "GitHub Actions" as source, so GitHub's built-in
+          # "pages build and deployment" stops racing this workflow.
+          enablement: true
 
       - uses: actions/upload-pages-artifact@v3
         with:
