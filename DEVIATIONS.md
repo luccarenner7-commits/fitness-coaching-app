@@ -5,30 +5,38 @@
 > vorkommt. Regel für V1: **Nur Daten/Felder verwenden, die tatsächlich in den
 > Sheets stehen.** Alles andere landet hier und kommt evtl. später.
 
-Stand: 2026-09-04
+Stand: 2026-09-05
 
 ---
 
 ## 1. Training / Übungen
 
 - [x] **RIR (Reps in Reserve) pro Satz** – seit 04.09. umgesetzt. Nicht im
-      Original-Sheet vorhanden, deshalb **eigener Tab `Trainingslog`**, den die
-      App automatisch im jeweiligen Wochen-Trainingsplan anlegt (bestehende
-      Tabs des Coaches bleiben unverändert). Spalten: Datum, Woche, Workout,
-      Übung, Einheit, Satz, Gewicht_kg, Wiederholungen, RIR, Schmerz.
+      Original-Sheet vorhanden. **Seit 05.09. kein eigener `Trainingslog`-Tab
+      mehr** — die Daten werden direkt in die bestehende Freitext-Zelle
+      „Einheit N" der jeweiligen Übungszeile geschrieben, in einem kompakten
+      Text-Format: `80kg×8 RIR2, 82.5kg×7 RIR1 · Schmerz 3` (Sätze
+      kommagetrennt, jeder Teil weglassbar, optionaler Schmerz-Suffix). Grund
+      der Änderung: der Coach wollte keinen separaten Tab, sondern die Werte
+      dort sehen, wo er sie ohnehin schon in seiner Vorlage erwartet.
 - [x] **Satz-für-Satz-Erfassung** (Gewicht/Wdh./RIR je einzelnem Satz,
-      strukturiert) – umgesetzt, schreibt in den `Trainingslog`-Tab statt in
-      die alte Freitext-Zelle „Einheit N" der Übung.
+      strukturiert) – umgesetzt, schreibt seit 05.09. direkt in die
+      Freitext-Zelle „Einheit N" der Übung (Read-Modify-Write: bestehende
+      Zelle wird geparst, der neue Satz per Satznummer eingefügt/ersetzt, alle
+      Sätze + Schmerz werden neu serialisiert zurückgeschrieben).
 - [x] **Schmerzen pro Übung** ("Schmerzen bei dieser Übung", 0–10, nach jeder
-      Übung abgefragt) – umgesetzt, eigene Markierungszeile (Satz = 0) im
-      `Trainingslog`-Tab. Getrennt vom täglichen Schmerztagebuch (Abschnitt 2).
+      Übung abgefragt) – umgesetzt, als ` · Schmerz N`-Suffix in derselben
+      „Einheit N"-Zelle. Getrennt vom täglichen Schmerztagebuch (Abschnitt 2).
 - [x] **Gewichtsverlauf pro Übung als Grafik** – umgesetzt, aber bewusst
       versteckt (Klick auf „Verlauf anzeigen" pro Übung). Liest wochenübergreifend
-      aus dem `Trainingslog`-Tab der letzten bis zu 10 Wochen; ältere Wochen
-      werden aus Performance-Gründen nicht gescannt.
+      aus den „Einheit N"-Zellen der letzten bis zu 10 Wochen-Trainingspläne;
+      ältere Wochen werden aus Performance-Gründen nicht gescannt.
       Rückwärtskompatibilität: Historie matcht Übungen über den Namen
-      (Workout+Übung-Text), nicht über eine ID — benennt der Coach eine Übung
-      um, reißt ihre Historie ab.
+      (Zeilentext), nicht über eine ID — benennt der Coach eine Übung um,
+      reißt ihre Historie ab.
+      **Kompromiss seit 05.09.:** die Zelle trägt keinen Zeitstempel, nur
+      Woche + Einheit-Index — die Grafik zeigt daher „W3 · 2" (Woche 3,
+      Einheit 2) statt eines echten Datums.
 - [x] **Satz bestätigen statt Auto-Save, Pausentimer.** Geändert am 04.09. nach
       Feedback: jeder Satz wird jetzt erst über einen expliziten
       Bestätigen-Button gespeichert (grüner Haken), kein stilles Auto-Save mehr
@@ -57,11 +65,10 @@ Stand: 2026-09-04
          (`src/app/training/WorkoutPage.tsx`).
       2. **Race Condition im Backend:** `saveExerciseSet_`/`saveExercisePain_`
          lasen und schrieben ohne Sperre — zwei nahezu gleichzeitige Aufrufe
-         (z. B. zwei schnelle Tipps auf die Schmerz-Skala) konnten beide „keine
-         vorhandene Zeile" sehen und beide eine neue anhängen → doppelte/leere
-         Zeilen im `Trainingslog`. Fix: `LockService` um die kritischen
-         Abschnitte, Schmerz-Buttons blockieren jetzt auch während des
-         Speicherns (`apps-script/Code.gs`).
+         (z. B. zwei schnelle Tipps auf die Schmerz-Skala) konnten beide vom
+         selben alten Zellenstand ausgehen und sich gegenseitig überschreiben.
+         Fix: `LockService` um die kritischen Abschnitte, Schmerz-Buttons
+         blockieren jetzt auch während des Speicherns (`apps-script/Code.gs`).
       3. **Stale-Closure-Bug:** Wurde ein Feld während eines noch laufenden
          Speichervorgangs (der bei kaltem Apps Script mehrere Sekunden dauern
          kann) erneut geändert, zeigte die App „gespeichert" (grüner Haken) für
@@ -72,7 +79,9 @@ Stand: 2026-09-04
          die Datums-Rückrechnung für die Wiederholungen-Spalte des Plans
          gejagt, konnte zu einem ungültigen Datum und einem Absturz der
          Verlaufsgrafik führen. Fix: eigener Normalizer für diese Spalte, plus
-         defensiver Fallback in `src/lib/week.ts`.
+         defensiver Fallback in `src/lib/week.ts`. (Der `Trainingslog`-Tab
+         selbst existiert seit 05.09. nicht mehr, siehe unten — der defensive
+         Fallback in `week.ts` bleibt trotzdem sinnvoll.)
       5. **Latenz:** Jeder Satz-Speichervorgang durchsuchte vorher den
          *gesamten* Kundenordner nur um das Wochen-Label zu lesen — spürbar
          langsam, sah nach „hängt" aus. Fix: 6h-Cache pro Woche
@@ -100,10 +109,8 @@ Stand: 2026-09-04
 - [ ] **Trainings-Kommentarfeld** ("Zusätzliche Kommentare können optional
       vorgesehen werden"). Kein Sheet-Feld dafür → Backlog.
 - [ ] **View-only-Pläne:** Tabs ohne "Einheit"-Spalten (z. B. "Urlaub",
-      "Homeworkout") können in der App weiterhin nur angesehen werden. Das ist
-      inzwischen eine reine Komfort-Gate-Entscheidung (die Erfassung schreibt
-      seit dem `Trainingslog`-Tab ohnehin nicht mehr in die Plan-Spalten) —
-      könnte man aufheben, wurde aber nicht explizit verlangt.
+      "Homeworkout") können in der App weiterhin nur angesehen werden — dort
+      gibt es schlicht keine Zelle, in die geschrieben werden könnte.
 
 ## 2. Schmerztagebuch
 

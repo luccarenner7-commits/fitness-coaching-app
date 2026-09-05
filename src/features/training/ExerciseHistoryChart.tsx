@@ -3,11 +3,20 @@ import { ChevronDown, LineChart, Loader2 } from 'lucide-react';
 import { useRepository } from '@/data';
 import type { ExerciseHistoryPoint } from '@/domain/types';
 import { cn } from '@/lib/cn';
-import { formatShortDate } from '@/lib/week';
 
 function topWeight(point: ExerciseHistoryPoint): number | null {
   const weights = point.sets.map((s) => s.weight).filter((w): w is number => w != null);
   return weights.length ? Math.max(...weights) : null;
+}
+
+/**
+ * The plan sheet's "Einheit N" cell has no timestamp of its own — only the
+ * week folder and which Einheit — so a per-day date isn't available (that's
+ * the trade-off for writing into the plan cell instead of a dated log row).
+ * "W3 · 2" = Woche 3, Einheit 2.
+ */
+function pointLabel(point: ExerciseHistoryPoint): string {
+  return `${point.weekLabel.replace('Woche ', 'W')} · ${point.sessionIndex}`;
 }
 
 /**
@@ -78,7 +87,7 @@ export function ExerciseHistoryChart({ exerciseName }: { exerciseName: string })
                         style={{ height: `${Math.max(8, (w / max) * 100)}%` }}
                       />
                     </div>
-                    <span className="text-[0.625rem] text-fg-subtle">{formatShortDate(p.date)}</span>
+                    <span className="text-[0.625rem] text-fg-subtle">{pointLabel(p)}</span>
                   </div>
                 );
               })}

@@ -1,6 +1,6 @@
 # Analyse der bestehenden Google-Sheets-Struktur
 
-Stand: 2026-09-04. Quelle: Google Drive von l.pirzer@leopirzercoaching.de,
+Stand: 2026-09-05. Quelle: Google Drive von l.pirzer@leopirzercoaching.de,
 Connector (nur lesend analysiert).
 
 ## Ordnerstruktur
@@ -60,15 +60,33 @@ Woche ist die, deren Bereich `heute` enthält.
 - Vorlage hat zusätzlich Block **"Belastungssteuerung"**: Zeilen Einheit 1/2/3
   × Spalten `Schmerzen während Training (0–10)`, `Intensität Training (1–10)`.
 
-### Trainingslog (neuer, App-verwalteter Tab)
+### Einheit-Zelle als strukturierter Speicherort (seit 05.09.)
 
-Seit 04.09. legt die App bei Bedarf selbst einen zusätzlichen Tab
-**`Trainingslog`** in der jeweiligen Wochen-Trainingsplan-Datei an (bestehende
-Tabs bleiben unangetastet). Dort landen Gewicht/Wdh./RIR pro Satz sowie
-„Schmerzen bei dieser Übung" — Felder, die das Original-Sheet nicht kennt.
-Spalten: `Datum | Woche | Workout | Übung | Einheit | Satz | Gewicht_kg |
-Wiederholungen | RIR | Schmerz`. `Satz = 0` ist eine reine Markierungszeile für
-den Schmerzwert der Übung/Einheit, ohne eigene Satzdaten.
+Die App legt **keinen zusätzlichen Tab mehr an** (der frühere `Trainingslog`-Tab
+vom 04.09. wurde wieder verworfen, auf Wunsch des Coaches). Stattdessen
+schreibt sie Gewicht/Wdh./RIR pro Satz sowie „Schmerzen bei dieser Übung"
+direkt in die ohnehin vorhandene Freitext-Zelle **`Einheit N`** der
+jeweiligen Übungszeile — dieselbe Zelle, die der Kunde bisher von Hand mit
+Text wie "80x8, 80x8, 80x7" gefüllt hat.
+
+Format (kompakt, App-intern geparst): Sätze kommagetrennt, je Satz
+`<Gewicht>kg×<Wdh> RIR<n>` (jeder Teil weglassbar), optional ein
+` · Schmerz <n>`-Suffix am Ende der Zelle:
+
+```
+80kg×8 RIR2, 82.5kg×7 RIR1 · Schmerz 3
+```
+
+Die App liest beim Speichern die aktuelle Zelle, parst sie, ändert nur den
+betroffenen Satz bzw. den Schmerzwert, und schreibt den kompletten Text
+zurück (Read-Modify-Write, per `LockService` gegen Gleichzeitigkeit
+abgesichert). Alte, von Hand eingetragene Freitext-Zellen (z. B. "80x8, 80x8")
+werden beim Lesen nicht erkannt (kein Regex-Treffer) und bleiben unangetastet
+stehen, bis die App selbst hineinschreibt.
+
+**Kompromiss:** Die Zelle trägt keinen Zeitstempel — nur Wochenordner +
+Einheit-Index sind bekannt, kein exaktes Datum. Die Verlaufsgrafik zeigt daher
+"W3 · 2" statt eines Datums an.
 
 ## Schmerztagebuch (Google Sheet)
 

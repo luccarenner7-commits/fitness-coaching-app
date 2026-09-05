@@ -12,6 +12,15 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: '05.09.2026',
+    features: [
+      'Trainingsdaten werden jetzt direkt in der gewohnten „Einheit"-Zelle des Trainingsplans gespeichert, statt in einem separaten Tab',
+    ],
+    fixes: [
+      'Verlaufsgrafik zeigt jetzt Woche und Einheit statt eines Datums (die Zelle kennt kein genaues Datum)',
+    ],
+  },
+  {
     date: '04.09.2026',
     features: [
       'Sätze mit Gewicht, Wiederholungen und RIR erfassen — jeder Satz wird einzeln bestätigt',
