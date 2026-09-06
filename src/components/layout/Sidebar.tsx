@@ -1,18 +1,19 @@
 import { NavLink } from 'react-router-dom';
 import { NAV_ITEMS } from '@/app/navigation';
 import { cn } from '@/lib/cn';
+import logoMark from '@/assets/logo-mark.png';
 
 /** Left sidebar — desktop/tablet only (hidden below md). */
 export function Sidebar() {
   return (
     <aside className="sticky top-0 hidden h-[100dvh] flex-col border-r border-border-soft bg-bg-elevated px-4 py-8 md:flex">
       <div className="flex items-center gap-2.5 px-2">
-        <span
+        <img
+          src={logoMark}
+          alt=""
           aria-hidden
-          className="grid h-9 w-9 place-items-center rounded-control bg-accent text-on-accent"
-        >
-          <span className="text-lg font-bold leading-none">LP</span>
-        </span>
+          className="h-9 w-9 shrink-0 object-contain"
+        />
         <span className="text-sm font-semibold leading-tight">
           Leo Pirzer
           <span className="block text-xs font-normal text-fg-subtle">Coaching</span>

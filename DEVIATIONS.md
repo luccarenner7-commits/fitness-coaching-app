@@ -187,20 +187,22 @@ Notizen …). **In den Sheets existiert davon fast nichts.**
 
 ## 6. Branding
 
-- [ ] **Echtes Logo einsetzen.** Aktuell nur Platzhalter: selbst gezeichnete
-      SVG-Icons (`public/icon.svg`, `favicon.svg`, `icon-maskable.svg`) und ein
-      violettes „LP"-Badge in der Sidebar (`src/components/layout/Sidebar.tsx`).
-      Das echte Leo-Pirzer-Logo (Hantel-Symbol + Schriftzug „LEO PIRZER PERSONAL
-      COACHING", schwarz auf weiß) wurde am 04.09. im Chat geteilt und als
-      500×500-JPEG gesichert, aber noch nicht eingebaut — ein automatischer
-      Zuschnitt (nur Symbol, ohne Schriftzug) ist im Browser-Werkzeug
-      gescheitert.
-      Für die Umsetzung fehlt noch eine Entscheidung/bessere Quelle:
-      - Im Chat erneut teilen **oder** als Datei (idealerweise SVG oder PNG mit
-        transparentem Hintergrund, höhere Auflösung als 500×500) bereitstellen.
-      - Klären: komplettes Logo (mit Schriftzug) als Icon, oder nur das
-        Hantel-Symbol freigestellt?
-      Betrifft: Favicon, Apple-Touch-Icon, PWA-Manifest-Icons, Sidebar-Badge.
+- [x] **Echtes Logo eingesetzt (06.09.).** Das Hantel-Symbol aus dem
+      Leo-Pirzer-Logo (weiße Version) ersetzt jetzt das Platzhalter-„LP"-Badge
+      in der Sidebar (`src/assets/logo-mark.png`) sowie Favicon,
+      Apple-Touch-Icon und die PWA-Manifest-Icons. Die selbst gezeichneten
+      SVG-Platzhalter (`icon.svg`, `favicon.svg`, `icon-maskable.svg`) sind
+      raus.
+      Quelle: die drei vom Coach geschickten 500×500-JPEGs liegen in
+      `docs/brand/`. Das Symbol wurde per Canvas aus der weißen Stapel-Version
+      freigestellt (Schwellwert auf weiß, Bounding-Box des oberen Clusters)
+      und auf dunklem Markenhintergrund (#0a0e1a) neu gerendert.
+      **Offen / Nice-to-have:** Die Icons sind aus einem ~217px-Ausschnitt
+      hochskaliert, also nicht gestochen scharf, und haben durch die
+      JPEG-Kompression einen leichten Graurand. Für perfekte Schärfe bräuchte
+      es das Logo als Vektor (SVG/AI/EPS) oder ein hochauflösendes PNG mit
+      transparentem Hintergrund. Ausserdem noch nicht genutzt: der volle
+      Schriftzug „LEO PIRZER PERSONAL COACHING" (z. B. im Mobile-Header).
 
 ## 7. Nicht in V1 (laut Konzept, hier nur zur Erinnerung)
 

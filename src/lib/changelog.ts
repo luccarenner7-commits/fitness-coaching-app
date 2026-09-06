@@ -12,6 +12,12 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: '06.09.2026',
+    features: [
+      'Echtes Leo-Pirzer-Logo als App-Icon und in der Seitenleiste (statt des „LP"-Platzhalters)',
+    ],
+  },
+  {
     date: '05.09.2026',
     features: [
       'Trainingsdaten werden jetzt direkt in der gewohnten „Einheit"-Zelle des Trainingsplans gespeichert, statt in einem separaten Tab',
