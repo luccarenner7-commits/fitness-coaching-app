@@ -5,18 +5,16 @@ on:
     branches: [main]
   workflow_dispatch:
 
+# Needs write access to push the built site to the `gh-pages` branch.
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write
 
-# Only one deployment at a time; don't cancel a run in progress.
 concurrency:
-  group: pages
+  group: deploy
   cancel-in-progress: false
 
 jobs:
-  build:
+  deploy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -31,27 +29,31 @@ jobs:
       - name: Build
         run: npm run build
         env:
-          # GitHub Pages serves the project at /<repo>/
+          # GitHub Pages serves the project under /<repo>/
           VITE_BASE: /${{ github.event.repository.name }}/
           VITE_APPS_SCRIPT_URL: ${{ vars.VITE_APPS_SCRIPT_URL }}
           VITE_APPS_SCRIPT_TOKEN: ${{ vars.VITE_APPS_SCRIPT_TOKEN }}
 
-      - uses: actions/configure-pages@v5
-        with:
-          # Switch Pages to "GitHub Actions" as source, so GitHub's built-in
-          # "pages build and deployment" stops racing this workflow.
-          enablement: true
-
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: dist
-
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - id: deployment
-        uses: actions/deploy-pages@v4
+      # Publish the built site to the `gh-pages` branch.
+      #
+      # Pages must be set to: Settings -> Pages -> Build and deployment ->
+      # Source = "Deploy from a branch", Branch = gh-pages, folder = / (root).
+      #
+      # Why a real branch instead of the "GitHub Actions" Pages source:
+      # GitHub's built-in Jekyll page builder kept re-publishing the *repo
+      # root* of main (the raw dev index.html that points at /src/main.tsx),
+      # which 404s and shows a black screen. Serving a dedicated branch that
+      # already contains the finished build removes that race for good.
+      # dist/.nojekyll tells the builder to copy the files as-is.
+      - name: Publish to gh-pages
+        run: |
+          touch dist/.nojekyll
+          cd dist
+          git init -q -b gh-pages
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -qm "Deploy ${GITHUB_SHA}"
+          git push -f "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" gh-pages:gh-pages
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
